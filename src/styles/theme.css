@@ -125,7 +125,9 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: #f1f2f4;
+    font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
   }
 
   /**
