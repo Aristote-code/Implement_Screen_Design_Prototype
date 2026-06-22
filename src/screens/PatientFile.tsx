@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Mic, CheckCircle2, Sparkles, Pencil } from "lucide-react";
+import { Mic, CheckCircle2, Pencil } from "lucide-react";
 import type { Patient } from "@/data/patients";
 import {
   CONSULTATION_STEPS,
   HISTORY_ENTRIES,
   PLACEHOLDER_COMPLAINT,
   AI_COMPLAINT,
-  AI_EXTRACTED_SUMMARY,
   AI_SOURCES,
 } from "@/data/consultation";
 import StepTracker from "@/components/StepTracker";
@@ -72,19 +71,7 @@ function Banner({ mode, onStart, onStop }: { mode: PatientFileMode; onStart: () 
         </div>
       </div>
     );
-  if (mode === "warning")
-    return (
-      <div className="flex items-center justify-between gap-4 rounded-[14px] border border-[#86efac] bg-[#f0fdf4] px-5 py-3.5">
-        <div className="flex items-center gap-2.5">
-          <CheckCircle2 className="size-4 shrink-0 text-[#16a34a]" />
-          <span className="text-[14px] font-semibold text-[#16a34a]">
-            Quality gate: Complete — 8 fields extracted with high confidence
-          </span>
-          <span className="rounded-[4px] bg-[#16a34a]/10 px-2 py-0.5 text-[11px] font-bold text-[#16a34a]">De-ID ✓</span>
-        </div>
-        <span className="shrink-0 text-[12px] text-[#687588]">Review each section and sign to finalise</span>
-      </div>
-    );
+  if (mode === "warning") return null;
   if (mode === "declined")
     return (
       <div className="rounded-[14px] bg-[#fef6e0] px-5 py-3.5">
@@ -148,17 +135,55 @@ export default function PatientFile({
   onStopRecording: () => void;
   onCompleteVisit: () => void;
 }) {
-  const [activeStep, setActiveStep] = useState(1);
-  const [visitedSteps, setVisitedSteps] = useState<Set<number>>(new Set([0, 1]));
+  const [activeStep, setActiveStep] = useState(0);
+  const [visitedSteps, setVisitedSteps] = useState<Set<number>>(new Set([0]));
   const [panelTab, setPanelTab] = useState<PanelTab>("Medical Info");
   const [highlight, setHighlight] = useState<SourceHighlight | null>(null);
   const sourceClicks = useRef(0);
+  // One ref per left-column section, in the same order as CONSULTATION_STEPS.
+  const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     setPanelTab(mode === "idle" ? "Medical Info" : "AI assistant");
   }, [mode]);
 
-  const showAiBanner = mode === "recording" || mode === "warning";
+  // Scroll-spy: as the nurse scrolls through the sections, the tracker ticks the
+  // steps off one by one and advances the active step. Visited steps stay checked.
+  useEffect(() => {
+    function spy() {
+      const line = 220; // activation line, just below the sticky top bar + step tracker
+      const els = sectionRefs.current;
+      let current = 0;
+      for (let i = 0; i < els.length; i++) {
+        const el = els[i];
+        if (el && el.getBoundingClientRect().top <= line) current = i;
+      }
+      // Snap to the last step once scrolled to the very bottom.
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+        current = els.length - 1;
+      }
+      setActiveStep(current);
+      setVisitedSteps((prev) => {
+        let changed = false;
+        const next = new Set(prev);
+        for (let i = 0; i <= current; i++) {
+          if (!next.has(i)) {
+            next.add(i);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }
+    spy();
+    window.addEventListener("scroll", spy, { passive: true });
+    window.addEventListener("resize", spy);
+    return () => {
+      window.removeEventListener("scroll", spy);
+      window.removeEventListener("resize", spy);
+    };
+  }, []);
+
   const aiFilled = mode === "warning" || mode === "finalised";
 
   // "Source" on any AI-added field opens the AI transcription and highlights the cited turns.
@@ -173,9 +198,15 @@ export default function PatientFile({
     [viewSource, highlight],
   );
 
+  // Clicking a tracker step scrolls to its section (and checks everything up to it).
   function handleStepClick(i: number) {
     setActiveStep(i);
-    setVisitedSteps((prev) => new Set([...prev, i]));
+    setVisitedSteps((prev) => {
+      const next = new Set(prev);
+      for (let k = 0; k <= i; k++) next.add(k);
+      return next;
+    });
+    sectionRefs.current[i]?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   return (
@@ -193,23 +224,13 @@ export default function PatientFile({
             className="z-10 lg:sticky lg:top-[104px]"
           />
 
-          <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
+          <div
+            ref={(el) => {
+              sectionRefs.current[0] = el;
+            }}
+            className="scroll-mt-[220px] rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7"
+          >
             <h1 className="text-[20px] font-bold text-[#111827]">Medical History</h1>
-
-            {showAiBanner && (
-              <div className="mt-4 flex items-start gap-2 rounded-[8px] border-l-4 border-[#2f78ee] bg-[#eff6ff] px-4 py-3">
-                <Sparkles className="mt-0.5 size-4 shrink-0 text-[#2f78ee]" />
-                <div className="space-y-1">
-                  <p className="text-[13px] leading-relaxed text-[#1d4ed8]">{AI_EXTRACTED_SUMMARY}</p>
-                  <button
-                    onClick={() => viewSource(AI_SOURCES.complaint)}
-                    className="text-[12px] font-semibold text-[#2f78ee] underline underline-offset-2 hover:text-[#1d4ed8]"
-                  >
-                    View source
-                  </button>
-                </div>
-              </div>
-            )}
 
             <div className="mt-5">
               <ChiefComplaint mode={mode} />
@@ -236,17 +257,29 @@ export default function PatientFile({
             </div>
           </div>
 
-          <VitalSigns />
-          <DifferentialDiagnosis aiFilled={aiFilled} />
-          <Laboratory />
-          <Procedures aiFilled={aiFilled} />
-          <Prescribe aiFilled={aiFilled} />
-          <PatientMovement
-            patient={patient}
-            onCompleteVisit={onCompleteVisit}
-            reviewedCount={visitedSteps.size}
-            totalSteps={CONSULTATION_STEPS.length}
-          />
+          <div ref={(el) => { sectionRefs.current[1] = el; }} className="scroll-mt-[220px]">
+            <VitalSigns />
+          </div>
+          <div ref={(el) => { sectionRefs.current[2] = el; }} className="scroll-mt-[220px]">
+            <DifferentialDiagnosis aiFilled={aiFilled} />
+          </div>
+          <div ref={(el) => { sectionRefs.current[3] = el; }} className="scroll-mt-[220px]">
+            <Laboratory />
+          </div>
+          <div ref={(el) => { sectionRefs.current[4] = el; }} className="scroll-mt-[220px]">
+            <Procedures aiFilled={aiFilled} />
+          </div>
+          <div ref={(el) => { sectionRefs.current[5] = el; }} className="scroll-mt-[220px]">
+            <Prescribe aiFilled={aiFilled} />
+          </div>
+          <div ref={(el) => { sectionRefs.current[6] = el; }} className="scroll-mt-[220px]">
+            <PatientMovement
+              patient={patient}
+              onCompleteVisit={onCompleteVisit}
+              reviewedCount={visitedSteps.size}
+              totalSteps={CONSULTATION_STEPS.length}
+            />
+          </div>
         </div>
 
         <PatientPanel

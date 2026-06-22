@@ -11,3 +11,6 @@ dist/
 
 # logs
 npm-debug.log*
+
+# Local Netlify folder
+.netlify
