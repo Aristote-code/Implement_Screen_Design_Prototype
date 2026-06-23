@@ -1,31 +1,28 @@
 import { useState } from "react";
 import { Pill, ArrowRight, Printer, Trash2 } from "lucide-react";
-import { MEDICINE_OPTIONS, AI_PRESCRIPTIONS, AI_SOURCES } from "@/data/consultation";
+import { MEDICINE_OPTIONS, AI_PRESCRIPTION_SUGGESTIONS, type AiBasis, type AiMode, type AiSuggestion } from "@/data/consultation";
 import SelectField from "./SelectField";
-import { AiPill } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag } from "./AiSuggestionCard";
 
 interface Rx {
-  id: number;
+  id: string;
   medication: string;
   quantity: string;
   notes: string;
-  ai?: boolean;
+  basis?: AiBasis;
 }
 
-export default function Prescribe({ aiFilled = false }: { aiFilled?: boolean }) {
-  const aiRx: Rx[] = AI_PRESCRIPTIONS.map((r, i) => ({
-    id: i + 1,
-    medication: r.name,
-    quantity: "1",
-    notes: "—",
-    ai: true,
-  }));
+export default function Prescribe({ aiMode = "none" }: { aiMode?: AiMode }) {
   const [medicine, setMedicine] = useState<string>();
   const [quantity, setQuantity] = useState("");
   const [duration, setDuration] = useState("");
   const [notes, setNotes] = useState("");
-  const [list, setList] = useState<Rx[]>(() => (aiFilled ? aiRx : []));
-  const [nextId, setNextId] = useState(aiFilled ? aiRx.length + 1 : 1);
+  const [list, setList] = useState<Rx[]>(() =>
+    aiMode === "accepted"
+      ? AI_PRESCRIPTION_SUGGESTIONS.map((r) => ({ id: r.id, medication: r.label, quantity: "1", notes: "—", basis: r }))
+      : [],
+  );
+  const [nextId, setNextId] = useState(1);
 
   function reset() {
     setMedicine(undefined);
@@ -36,14 +33,28 @@ export default function Prescribe({ aiFilled = false }: { aiFilled?: boolean }) 
 
   function submit() {
     if (!medicine) return;
-    setList((l) => [...l, { id: nextId, medication: medicine, quantity: quantity || "1", notes: notes || "—" }]);
+    setList((l) => [...l, { id: `m${nextId}`, medication: medicine, quantity: quantity || "1", notes: notes || "—" }]);
     setNextId((n) => n + 1);
     reset();
+  }
+
+  function acceptAi(s: AiSuggestion) {
+    setList((l) => (l.some((x) => x.id === s.id) ? l : [...l, { id: s.id, medication: s.label, quantity: "1", notes: "—", basis: s }]));
   }
 
   return (
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
       <h2 className="mb-5 text-[20px] font-bold text-[#111827]">Prescribe</h2>
+
+      {aiMode === "suggest" && (
+        <AiSuggestions
+          heading="AI medication suggestions"
+          note="Based on the working diagnosis. Each is checked against the patient's allergies and current medication. Accept to add to the prescription."
+          suggestions={AI_PRESCRIPTION_SUGGESTIONS}
+          acceptLabel="Prescribe"
+          onAccept={acceptAi}
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         {/* Left: medicine + form */}
@@ -118,7 +129,7 @@ export default function Prescribe({ aiFilled = false }: { aiFilled?: boolean }) 
                     <div key={rx.id} className="grid grid-cols-[1.4fr_0.8fr_1.4fr_auto] items-center gap-3 border-b border-[#f1f2f4] px-4 py-3 text-[14px] text-[#111827]">
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="truncate font-medium">{rx.medication}</span>
-                        {rx.ai && <AiPill source={AI_SOURCES.prescriptions} />}
+                        {rx.basis && <AiTag basis={rx.basis} />}
                       </div>
                       <span>{rx.quantity}</span>
                       <span className="text-[13px] text-[#687588]">{rx.notes}</span>

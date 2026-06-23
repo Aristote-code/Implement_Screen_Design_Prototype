@@ -53,23 +53,28 @@ export const PERSONAL_INFO: { label: string; value: string }[] = [
 ];
 
 // --- Vital signs (Figma overview) ---
+// NOTE: vitals are physical measurements ENTERED BY THE CLINICIAN, not extracted by AI
+// from the transcript — so they carry no AI "Source". AI's only role here is an advisory
+// note that reasons over the values the clinician recorded (see VITAL_ADVISORY).
 export interface VitalRow {
   key: "pb" | "pulse" | "temp" | "resp" | "weight";
   label: string;
   value: string;
   tone: "green" | "yellow" | "red" | "blue";
-  // When present, this row was extracted by AI — it shows an "Ai" badge + Source link
-  // that highlights these TRANSCRIPT turn indices.
-  aiSource?: number[];
 }
 export const VITALS_LATEST: VitalRow[] = [
   { key: "pb", label: "PB (Mm/Hg):", value: "110/30", tone: "green" },
-  { key: "pulse", label: "Pulse (Beat/Min)", value: "60", tone: "yellow", aiSource: [4, 5] },
+  { key: "pulse", label: "Pulse (Beat/Min)", value: "60", tone: "yellow" },
   { key: "temp", label: "Temp (OC)", value: "60", tone: "red" },
-  { key: "resp", label: "Resp. Rate (Breath/Min)", value: "60", tone: "blue", aiSource: [4, 5] },
+  { key: "resp", label: "Resp. Rate (Breath/Min)", value: "60", tone: "blue" },
   { key: "weight", label: "Weight (Kg)", value: "60", tone: "yellow" },
 ];
 export const VITAL_GROUPS = ["Yesterday: 02:00 pa", "Today: 08:00 am", "Today: 06:00 pm"];
+
+// Advisory shown beneath the vitals while a consultation is being documented. It REASONS
+// over the recorded values (PRD 5.9) — it does not author them, and has no transcript source.
+export const VITAL_ADVISORY =
+  "Respiratory rate ~50–60/min is outside the normal range. Consider re-checking oxygen saturation and escalating the respiratory assessment. Advisory only — based on the values you recorded.";
 
 // --- Differential diagnosis ---
 export const DIAGNOSIS_OPTIONS = ["HP: Health post diagnosis", "Presumptive diagnosis", "Confirmed diagnosis"];
@@ -189,13 +194,33 @@ export const TRANSCRIPT: TranscriptLine[] = [
   { speaker: "Patient", text: "Very fast — the monitor showed around fifty." },
 ];
 
-// Transcript turns (indices into TRANSCRIPT) that back each AI-extracted entry.
-// Clicking a field's "Source" opens the AI transcription and highlights these lines.
+// How AI surfaces in a section while a consultation is documented:
+//  - "none"     → idle / declined: no AI involvement
+//  - "suggest"  → post-recording review: AI proposes items the clinician accepts/dismisses
+//  - "accepted" → finalised: the clinician already accepted the AI items; shown committed + locked
+export type AiMode = "none" | "suggest" | "accepted";
+
+// The evidence behind any AI output. The reviewers' core point: AI must always say WHY.
+// There are TWO kinds of provenance and a suggestion may carry either or both:
+//  - `source`    → it was HEARD in the consultation; "Source" jumps to those TRANSCRIPT turns
+//  - `guideline` → it came from clinical KNOWLEDGE (not said in the room); cite the reference
+//  `rationale` is the plain-language reasoning shown in both cases.
+//  `warning` is a safety flag (allergy collision, interaction, dose) — surfaced, never blocking.
+export interface AiBasis {
+  source?: number[];
+  rationale?: string;
+  guideline?: string;
+  warning?: { kind: "allergy" | "interaction" | "dose"; text: string };
+}
+
+export interface AiSuggestion extends AiBasis {
+  id: string;
+  label: string;
+}
+
+// Transcript turns (indices into TRANSCRIPT) that back the AI-extracted chief complaint.
 export const AI_SOURCES = {
   complaint: [1, 3, 5], // shortness of breath / wheezing / fast breathing
-  diagnoses: [1, 3, 5], // respiratory symptoms → asthma / pneumonia
-  procedures: [3, 5], // wheezing + fast breathing → nebulisation / O₂ monitoring
-  prescriptions: [1, 3], // breathing difficulty + wheezing → bronchodilator / steroid
 } as const;
 
 export interface AiField {
@@ -212,20 +237,88 @@ export const SIGN_FINALISE_FIELDS: AiField[] = [
 
 export const QUALITY_GATE = "Complete — 8 fields extracted with high confidence · De-ID applied";
 
-// --- AI suggestion lists (shown inline in sections before nurse confirms) ---
-export const AI_DIAGNOSES = [
-  { code: "J45.9", name: "Asthma, unspecified" },
-  { code: "J18.9", name: "Pneumonia, unspecified" },
+// --- AI advisory suggestions (PRD 5.9) ---
+// Each suggestion explains WHY: either it was heard in the consultation (`source`) or it
+// comes from clinical guidance (`guideline`). The clinician accepts or dismisses each.
+
+// Differential diagnosis: one suggestion grounded in the conversation, one proposed purely
+// from clinical guidance (the "consider also" case the reviewers asked for).
+export const AI_DIAGNOSIS_SUGGESTIONS: AiSuggestion[] = [
+  {
+    id: "dx-asthma",
+    label: "J45.9 — Asthma exacerbation",
+    source: [1, 3, 5],
+    rationale:
+      "Wheezing and progressively worsening shortness of breath over 2 days; known asthma since 2020 with no relief from Salbutamol today.",
+  },
+  {
+    id: "dx-pneumonia",
+    label: "J18.9 — Pneumonia (consider to exclude)",
+    guideline: "IMCI · Acute Respiratory Illness",
+    rationale:
+      "Tachypnoea ~50–60/min without bronchodilator response can indicate a lower-respiratory infection. Not raised in the conversation — proposed from clinical guidance.",
+  },
 ];
 
-export const AI_PROCEDURES = [
-  { name: "Nebulisation therapy" },
-  { name: "O₂ saturation monitoring" },
+// Investigations the AI proposes (PRD 5.9 "tests that may be appropriate").
+export const AI_LAB_SUGGESTIONS: AiSuggestion[] = [
+  {
+    id: "lab-cxr",
+    label: "Chest X-Ray (PA) — Radiology",
+    guideline: "Acute Respiratory Illness pathway",
+    rationale: "Differentiate an asthma exacerbation from pneumonia given the tachypnoea.",
+  },
+  {
+    id: "lab-fbc",
+    label: "Full Blood Count (FBC/NFS) — Blood",
+    guideline: "Breathlessness work-up",
+    rationale: "Screen for infection or anaemia that could be contributing to the breathlessness.",
+  },
 ];
 
-export const AI_PRESCRIPTIONS = [
-  { name: "Salbutamol 2.5mg nebuliser PRN" },
-  { name: "Prednisolone 40mg OD 5 days" },
+// AI interpretation of returned lab results (the reviewers asked: don't just say "added by
+// technician" — analyse them). Shown on the Lab Result view.
+export const AI_LAB_INTERPRETATION =
+  "Haemoglobin 10.1 g/dL is below range — mild anaemia may be adding to the breathlessness. Urine protein mildly raised; correlate clinically. Other values within range. Consider iron studies if symptoms persist.";
+
+export const AI_PROCEDURE_SUGGESTIONS: AiSuggestion[] = [
+  {
+    id: "proc-neb",
+    label: "Nebulisation therapy",
+    source: [3, 5],
+    rationale: "Active wheeze with respiratory distress — deliver a bronchodilator.",
+  },
+  {
+    id: "proc-spo2",
+    label: "O₂ saturation monitoring",
+    source: [5],
+    rationale: "Reported respiratory rate around 50/min — monitor oxygenation.",
+  },
+];
+
+export const AI_PRESCRIPTION_SUGGESTIONS: AiSuggestion[] = [
+  {
+    id: "rx-salb",
+    label: "Salbutamol 2.5mg nebuliser PRN",
+    source: [1, 3],
+    rationale: "First-line bronchodilator for an acute wheeze.",
+  },
+  {
+    id: "rx-pred",
+    label: "Prednisolone 40mg OD × 5 days",
+    guideline: "Asthma exacerbation · oral corticosteroid",
+    rationale: "Short oral steroid course for a moderate exacerbation.",
+  },
+  {
+    id: "rx-amox",
+    label: "Amoxicillin 500mg TID × 5 days",
+    guideline: "Community-acquired pneumonia",
+    rationale: "Would cover bacterial pneumonia if confirmed on imaging.",
+    warning: {
+      kind: "allergy",
+      text: "Allergy collision — this patient is allergic to Penicillins, and Amoxicillin is a penicillin. Review before prescribing.",
+    },
+  },
 ];
 
 // --- Pre-consultation context (PRD 5.1 — shown in idle mode before recording) ---

@@ -1,14 +1,23 @@
 import { useState } from "react";
 import { Search, Plus, Check, Trash2 } from "lucide-react";
-import { PROCEDURE_TABS, PROCEDURE_OPTIONS, SERVICE_TABS, PROCEDURE_SERVICES, AI_PROCEDURES, AI_SOURCES } from "@/data/consultation";
+import {
+  PROCEDURE_TABS,
+  PROCEDURE_OPTIONS,
+  SERVICE_TABS,
+  PROCEDURE_SERVICES,
+  AI_PROCEDURE_SUGGESTIONS,
+  type AiBasis,
+  type AiMode,
+  type AiSuggestion,
+} from "@/data/consultation";
 import SelectField from "./SelectField";
-import { AiPill } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag } from "./AiSuggestionCard";
 
 interface SubmittedItem {
-  id: number;
+  id: string;
   name: string;
   qty: number;
-  ai?: boolean;
+  basis?: AiBasis;
 }
 
 function Checkbox({ on }: { on: boolean }) {
@@ -19,16 +28,19 @@ function Checkbox({ on }: { on: boolean }) {
   );
 }
 
-export default function Procedures({ aiFilled = false }: { aiFilled?: boolean }) {
-  const aiItems: SubmittedItem[] = AI_PROCEDURES.map((p, i) => ({ id: i + 1, name: p.name, qty: 1, ai: true }));
-  const [tab, setTab] = useState(aiFilled ? "Submitted Procedures" : PROCEDURE_TABS[0]);
+export default function Procedures({ aiMode = "none" }: { aiMode?: AiMode }) {
+  const [tab, setTab] = useState(aiMode === "accepted" ? "Submitted Procedures" : PROCEDURE_TABS[0]);
   const [serviceTab, setServiceTab] = useState(SERVICE_TABS[0]);
   const [procedure, setProcedure] = useState<string>();
   const [search, setSearch] = useState("");
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [qty, setQty] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState<SubmittedItem[]>(() => (aiFilled ? aiItems : []));
-  const [nextId, setNextId] = useState(aiFilled ? aiItems.length + 1 : 1);
+  const [submitted, setSubmitted] = useState<SubmittedItem[]>(() =>
+    aiMode === "accepted"
+      ? AI_PROCEDURE_SUGGESTIONS.map((p) => ({ id: p.id, name: p.label, qty: 1, basis: p }))
+      : [],
+  );
+  const [nextId, setNextId] = useState(1);
 
   const config = PROCEDURE_SERVICES[serviceTab];
   const items = config.items.filter((i) => i.toLowerCase().includes(search.trim().toLowerCase()));
@@ -46,7 +58,7 @@ export default function Procedures({ aiFilled = false }: { aiFilled?: boolean })
     if (!toAdd.length) return;
     let id = nextId;
     const additions = toAdd.map((name) => ({
-      id: id++,
+      id: `m${id++}`,
       name,
       qty: config.quantity ? Math.max(1, parseInt(qty[name] || "1", 10) || 1) : 1,
     }));
@@ -56,9 +68,25 @@ export default function Procedures({ aiFilled = false }: { aiFilled?: boolean })
     setQty({});
   }
 
+  function acceptAi(s: AiSuggestion) {
+    setSubmitted((cur) => (cur.some((x) => x.id === s.id) ? cur : [...cur, { id: s.id, name: s.label, qty: 1, basis: s }]));
+    setTab("Submitted Procedures");
+  }
+
   return (
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
       <h2 className="text-[20px] font-bold text-[#111827]">Procedures</h2>
+
+      {aiMode === "suggest" && (
+        <div className="mt-5">
+          <AiSuggestions
+            heading="AI procedure suggestions"
+            note="Suggested from the differential and what was heard in the consultation. Accept to add to submitted procedures."
+            suggestions={AI_PROCEDURE_SUGGESTIONS}
+            onAccept={acceptAi}
+          />
+        </div>
+      )}
 
       <div className="mt-4 flex gap-8 border-b border-[#f1f2f4]">
         {PROCEDURE_TABS.map((t) => (
@@ -146,7 +174,7 @@ export default function Procedures({ aiFilled = false }: { aiFilled?: boolean })
               <div key={item.id} className="flex items-center justify-between gap-3 rounded-[10px] bg-[#f7f8fa] px-4 py-4">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className="text-[14px] text-[#111827]">{item.name} ({item.qty}X)</span>
-                  {item.ai && <AiPill source={AI_SOURCES.procedures} />}
+                  {item.basis && <AiTag basis={item.basis} />}
                 </div>
                 <button onClick={() => setSubmitted((s) => s.filter((x) => x.id !== item.id))} className="shrink-0 text-[#e03137] transition-colors hover:text-[#b91c1c]">
                   <Trash2 className="size-5" />

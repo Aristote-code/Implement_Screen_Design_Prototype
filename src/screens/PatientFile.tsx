@@ -7,10 +7,11 @@ import {
   PLACEHOLDER_COMPLAINT,
   AI_COMPLAINT,
   AI_SOURCES,
+  type AiMode,
 } from "@/data/consultation";
 import StepTracker from "@/components/StepTracker";
 import PatientPanel, { type PanelTab } from "@/components/PatientPanel";
-import { AiPill } from "@/components/sections/AiSuggestionCard";
+import { AiTag } from "@/components/sections/AiSuggestionCard";
 import { SourceContext, type SourceApi, type SourceHighlight } from "@/components/SourceContext";
 import VitalSigns from "@/components/sections/VitalSigns";
 import DifferentialDiagnosis from "@/components/sections/DifferentialDiagnosis";
@@ -89,34 +90,39 @@ function Banner({ mode, onStart, onStop }: { mode: PatientFileMode; onStart: () 
 }
 
 function ChiefComplaint({ mode }: { mode: PatientFileMode }) {
-  const [value, setValue] = useState(PLACEHOLDER_COMPLAINT);
   const isAiFilled = mode === "warning" || mode === "finalised";
-
-  if (isAiFilled) {
-    return (
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="text-[14px] font-bold text-[#111827]">Chief Complaint</span>
-          <AiPill source={AI_SOURCES.complaint} />
-        </div>
-        <p className="rounded-[12px] border border-[#d6efe6] bg-[#f3fbf7] p-4 text-[14px] leading-relaxed text-[#1f7a55]">
-          {AI_COMPLAINT}
-        </p>
-      </div>
-    );
-  }
+  // AI may DRAFT the complaint from the recording, but it stays editable (PRD 5.8 — every
+  // extracted field is editable). The clinician can accept, refine, or rewrite it.
+  const [value, setValue] = useState(isAiFilled ? AI_COMPLAINT : PLACEHOLDER_COMPLAINT);
 
   return (
     <div className="space-y-2">
-      <span className="text-[14px] font-bold text-[#111827]">Chief Complaint</span>
-      <div className="rounded-[12px] border border-[#e9eaec] p-4 focus-within:border-[#2f78ee]">
+      <div className="flex items-center gap-2">
+        <span className="text-[14px] font-bold text-[#111827]">Chief Complaint</span>
+        {isAiFilled && (
+          <AiTag
+            basis={{
+              source: AI_SOURCES.complaint,
+              rationale: "Drafted from the recording — patient described shortness of breath and wheezing worsening over 2 days.",
+            }}
+          />
+        )}
+      </div>
+      <div
+        className={`rounded-[12px] border p-4 focus-within:border-[#2f78ee] ${
+          isAiFilled ? "border-[#d6efe6] bg-[#f3fbf7]" : "border-[#e9eaec]"
+        }`}
+      >
         <textarea
           value={value}
-          onChange={(e) => setValue(e.target.value.slice(0, 200))}
-          rows={2}
+          onChange={(e) => setValue(e.target.value.slice(0, 400))}
+          rows={isAiFilled ? 4 : 2}
           className="w-full resize-none bg-transparent text-[14px] leading-relaxed text-[#111827] outline-none"
         />
-        <div className="mt-1 text-[12px] text-[#9aa6b6]">{value.length}/200</div>
+        <div className="mt-1 flex items-center justify-between text-[12px] text-[#9aa6b6]">
+          <span>{isAiFilled ? "AI-drafted — edit freely before signing" : ""}</span>
+          <span>{value.length}/400</span>
+        </div>
       </div>
     </div>
   );
@@ -184,7 +190,10 @@ export default function PatientFile({
     };
   }, []);
 
-  const aiFilled = mode === "warning" || mode === "finalised";
+  // Flow: after recording the AI does NOT auto-commit downstream sections. It surfaces
+  // advisory suggestions the clinician accepts/dismisses ("suggest"). Once finalised, the
+  // accepted items are shown committed + locked ("accepted").
+  const aiMode: AiMode = mode === "warning" ? "suggest" : mode === "finalised" ? "accepted" : "none";
 
   // "Source" on any AI-added field opens the AI transcription and highlights the cited turns.
   const viewSource = useCallback((turns: number[]) => {
@@ -258,19 +267,19 @@ export default function PatientFile({
           </div>
 
           <div ref={(el) => { sectionRefs.current[1] = el; }} className="scroll-mt-[220px]">
-            <VitalSigns />
+            <VitalSigns advisory={aiMode !== "none"} />
           </div>
           <div ref={(el) => { sectionRefs.current[2] = el; }} className="scroll-mt-[220px]">
-            <DifferentialDiagnosis aiFilled={aiFilled} />
+            <DifferentialDiagnosis aiMode={aiMode} />
           </div>
           <div ref={(el) => { sectionRefs.current[3] = el; }} className="scroll-mt-[220px]">
-            <Laboratory />
+            <Laboratory aiMode={aiMode} />
           </div>
           <div ref={(el) => { sectionRefs.current[4] = el; }} className="scroll-mt-[220px]">
-            <Procedures aiFilled={aiFilled} />
+            <Procedures aiMode={aiMode} />
           </div>
           <div ref={(el) => { sectionRefs.current[5] = el; }} className="scroll-mt-[220px]">
-            <Prescribe aiFilled={aiFilled} />
+            <Prescribe aiMode={aiMode} />
           </div>
           <div ref={(el) => { sectionRefs.current[6] = el; }} className="scroll-mt-[220px]">
             <PatientMovement

@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { HeartPulse, Activity, Thermometer, Wind, Scale, ArrowDown, ChevronDown, ChevronRight } from "lucide-react";
-import { VITALS_LATEST, VITAL_GROUPS, type VitalRow } from "@/data/consultation";
-import { AiPill } from "./AiSuggestionCard";
+import { HeartPulse, Activity, Thermometer, Wind, Scale, ArrowDown, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
+import { VITALS_LATEST, VITAL_GROUPS, VITAL_ADVISORY, type VitalRow } from "@/data/consultation";
 
 const ICONS: Record<VitalRow["key"], typeof HeartPulse> = {
   pb: HeartPulse,
@@ -26,10 +25,7 @@ function Row({ row }: { row: VitalRow }) {
         <Icon className="size-[18px]" strokeWidth={2} />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="text-[12px] text-[#687588]">{row.label}</p>
-          {row.aiSource && <AiPill source={row.aiSource} />}
-        </div>
+        <p className="text-[12px] text-[#687588]">{row.label}</p>
         <p className="text-[14px] font-bold text-[#111827]">{row.value}</p>
       </div>
       <div className="flex flex-col items-end gap-1">
@@ -42,7 +38,7 @@ function Row({ row }: { row: VitalRow }) {
   );
 }
 
-export default function VitalSigns() {
+export default function VitalSigns({ advisory = false }: { advisory?: boolean }) {
   const [openGroup, setOpenGroup] = useState(0);
 
   return (
@@ -82,6 +78,16 @@ export default function VitalSigns() {
           );
         })}
       </div>
+
+      {advisory && (
+        <div className="mt-5 flex items-start gap-2.5 rounded-[12px] border border-[#cdeee9] bg-[#f6fffd] px-4 py-3">
+          <Sparkles className="mt-0.5 size-4 shrink-0 text-[#0b9487]" />
+          <div>
+            <span className="text-[12px] font-bold text-[#0b9487]">AI advisory</span>
+            <p className="mt-0.5 text-[12px] leading-relaxed text-[#687588]">{VITAL_ADVISORY}</p>
+          </div>
+        </div>
+      )}
 
       <div className="mt-5 flex flex-wrap gap-3">
         <button className="rounded-[10px] bg-[#2f78ee] px-5 py-3 text-[14px] font-bold text-white transition-colors hover:bg-[#2a6cd8]">

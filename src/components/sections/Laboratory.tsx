@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Plus, ArrowRight, CheckCircle2, X } from "lucide-react";
+import { Search, Plus, ArrowRight, CheckCircle2, X, Sparkles, Trash2 } from "lucide-react";
 import {
   LAB_CATEGORIES,
   LAB_SAMPLES,
@@ -11,10 +11,22 @@ import {
   AUDIOLOGY_TABS,
   AUDIOLOGY_TESTS,
   AUDIOLOGY_RESULTS,
+  AI_LAB_SUGGESTIONS,
+  AI_LAB_INTERPRETATION,
   type LabResult,
+  type AiBasis,
+  type AiMode,
+  type AiSuggestion,
 } from "@/data/consultation";
+import { AiSuggestions, AiTag } from "./AiSuggestionCard";
 
 type Category = "Laboratory" | "Radiology" | "Audiology";
+
+interface OrderedTest {
+  id: string;
+  label: string;
+  basis: AiBasis;
+}
 
 const MODE_TABS: Record<Category, [string, string]> = {
   Laboratory: ["Lab Order", "Lab Result"],
@@ -120,7 +132,7 @@ function ViewResultTable({ rows, commentLabel }: { rows: { test: string; comment
   );
 }
 
-export default function Laboratory() {
+export default function Laboratory({ aiMode = "none" }: { aiMode?: AiMode }) {
   const [category, setCategory] = useState<Category>("Laboratory");
   const [mode, setMode] = useState<"request" | "result">("request");
   const [sample, setSample] = useState(LAB_SAMPLES[0]);
@@ -128,6 +140,13 @@ export default function Laboratory() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [urgent, setUrgent] = useState(false);
   const [toast, setToast] = useState(false);
+  const [ordered, setOrdered] = useState<OrderedTest[]>(() =>
+    aiMode === "accepted" ? AI_LAB_SUGGESTIONS.map((s) => ({ id: s.id, label: s.label, basis: s })) : [],
+  );
+
+  function acceptAi(s: AiSuggestion) {
+    setOrdered((cur) => (cur.some((x) => x.id === s.id) ? cur : [...cur, { id: s.id, label: s.label, basis: s }]));
+  }
 
   useEffect(() => {
     if (!toast) return;
@@ -161,6 +180,38 @@ export default function Laboratory() {
 
   return (
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
+      {aiMode === "suggest" && mode === "request" && (
+        <AiSuggestions
+          heading="AI suggested investigations"
+          note="Tests proposed from the symptoms and the working differential — review before ordering."
+          suggestions={AI_LAB_SUGGESTIONS}
+          acceptLabel="Order"
+          onAccept={acceptAi}
+        />
+      )}
+
+      {ordered.length > 0 && mode === "request" && (
+        <div className="mb-4 rounded-[12px] border border-[#e3f1ee] bg-[#f7fbfa] p-3">
+          <p className="mb-2 text-[12px] font-bold text-[#0b9487]">Ordered (AI-assisted)</p>
+          <div className="space-y-2">
+            {ordered.map((o) => (
+              <div key={o.id} className="flex items-center justify-between gap-3 rounded-[8px] bg-white px-3 py-2">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="truncate text-[14px] font-medium text-[#111827]">{o.label}</span>
+                  <AiTag basis={o.basis} />
+                </div>
+                <button
+                  onClick={() => setOrdered((c) => c.filter((x) => x.id !== o.id))}
+                  className="shrink-0 text-[#e03137] transition-colors hover:text-[#b91c1c]"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Category tabs */}
       <div className="flex flex-wrap items-center gap-8">
         {(LAB_CATEGORIES as Category[]).map((c) => (
@@ -285,6 +336,17 @@ export default function Laboratory() {
             <CheckCircle2 className="size-5 shrink-0 text-[#2f9d6e]" />
             <span className="text-[14px] font-medium text-[#2f9d6e]">{RESULT_BY[category]}</span>
           </div>
+
+          {aiMode !== "none" && category === "Laboratory" && (
+            <div className="mt-4 flex items-start gap-2.5 rounded-[12px] border border-[#cdeee9] bg-[#f6fffd] px-4 py-3">
+              <Sparkles className="mt-0.5 size-4 shrink-0 text-[#0b9487]" />
+              <div>
+                <span className="text-[12px] font-bold text-[#0b9487]">AI interpretation</span>
+                <span className="ml-2 rounded-full bg-[#0b9487]/10 px-2 py-0.5 text-[11px] font-semibold text-[#0b9487]">Advisory</span>
+                <p className="mt-1 text-[12px] leading-relaxed text-[#687588]">{AI_LAB_INTERPRETATION}</p>
+              </div>
+            </div>
+          )}
 
           {category === "Laboratory" && <LabResultTable />}
 
