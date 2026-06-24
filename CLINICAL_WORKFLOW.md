@@ -43,6 +43,13 @@ Prescriptions          AI SUGGESTS — only after the diagnosis is confirmed.
 |---|---|---|
 | Chief complaint | Draft from transcript, with a Source link | — (must stay editable) |
 | Vital signs | **Nothing** | No badge, no Source, no auto-fill, no advisory on the measurement |
+
+Vital signs are entered/edited inline by the nurse (Figma `60:27944` "Vitals for pregnant" /
+`60:23744` "Physical examination"): a pencil flips the "this visit's vitals" panel into input
+fields — BP as Systolic/Diastolic, the rest as number inputs, BMI auto-computed from
+weight+height — and a checkmark saves. Saving is what records the vitals and unlocks the AI
+differential.
+
 | Differential | Suggest with reasoning (transcript Source **or** cited guideline) | Don't suggest before vitals |
 | Lab order | Suggest appropriate tests with reasoning | Don't suggest before a differential |
 | Lab results | Interpret / flag abnormal values | Don't enter or invent result values |
