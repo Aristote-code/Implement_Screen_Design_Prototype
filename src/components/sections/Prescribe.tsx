@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pill, ArrowRight, Printer, Trash2 } from "lucide-react";
 import { MEDICINE_OPTIONS, AI_PRESCRIPTION_SUGGESTIONS, type AiBasis, type AiMode, type AiSuggestion } from "@/data/consultation";
 import SelectField from "./SelectField";
-import { AiSuggestions, AiTag, LockedNote } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag } from "./AiSuggestionCard";
 
 interface Rx {
   id: string;
@@ -12,7 +12,15 @@ interface Rx {
   basis?: AiBasis;
 }
 
-export default function Prescribe({ aiMode = "none", unlocked = true }: { aiMode?: AiMode; unlocked?: boolean }) {
+export default function Prescribe({
+  aiMode = "none",
+  unlocked = true,
+  onCountChange,
+}: {
+  aiMode?: AiMode;
+  unlocked?: boolean;
+  onCountChange?: (n: number) => void;
+}) {
   const [medicine, setMedicine] = useState<string>();
   const [quantity, setQuantity] = useState("");
   const [duration, setDuration] = useState("");
@@ -23,6 +31,11 @@ export default function Prescribe({ aiMode = "none", unlocked = true }: { aiMode
       : [],
   );
   const [nextId, setNextId] = useState(1);
+
+  // Report prescription count up so the step tracker can tick the Prescribe step.
+  useEffect(() => {
+    onCountChange?.(list.length);
+  }, [list.length, onCountChange]);
 
   function reset() {
     setMedicine(undefined);
@@ -46,18 +59,15 @@ export default function Prescribe({ aiMode = "none", unlocked = true }: { aiMode
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
       <h2 className="mb-5 text-[20px] font-bold text-[#111827]">Prescribe</h2>
 
-      {aiMode === "suggest" &&
-        (unlocked ? (
-          <AiSuggestions
-            heading="AI medication suggestions"
-            note="Based on the confirmed diagnosis. Each is checked against the patient's allergies and current medication. Accept to add to the prescription."
-            suggestions={AI_PRESCRIPTION_SUGGESTIONS}
-            acceptLabel="Prescribe"
-            onAccept={acceptAi}
-          />
-        ) : (
-          <LockedNote>AI medication suggestions appear once the working diagnosis is confirmed.</LockedNote>
-        ))}
+      {aiMode === "suggest" && unlocked && (
+        <AiSuggestions
+          heading="AI medication suggestions"
+          note="Based on the confirmed diagnosis. Each is checked against the patient's allergies and current medication. Accept to add to the prescription."
+          suggestions={AI_PRESCRIPTION_SUGGESTIONS}
+          acceptLabel="Prescribe"
+          onAccept={acceptAi}
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         {/* Left: medicine + form */}

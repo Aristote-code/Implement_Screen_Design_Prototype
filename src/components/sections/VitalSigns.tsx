@@ -65,8 +65,7 @@ export default function VitalSigns({
           that must be done before the AI will suggest a differential. */}
       {aiMode === "suggest" && !recorded && (
         <p className="mt-2 text-[13px] leading-relaxed text-[#687588]">
-          Measured at the bedside by the nurse. Record this visit's vital signs to continue — the AI differential
-          becomes available once they're in.
+          Measured at the bedside by the nurse — record this visit's vital signs to continue.
         </p>
       )}
 

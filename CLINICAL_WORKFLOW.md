@@ -60,10 +60,19 @@ A bare "Ai" badge with no reasoning is not acceptable.
 
 ## Advisory, not blocking
 
-The gating is **advisory**: a section whose prerequisite isn't met shows a dashed "waiting"
-note instead of AI suggestions, but the nurse can still document that section manually at any
-time. AI never blocks a clinical action (PRD 5.9). Safety flags (e.g. a penicillin-allergy
-collision) are surfaced prominently but still never block — the clinician decides.
+The gating is **advisory**: a section whose prerequisite isn't met simply doesn't show its AI
+suggestions yet, but the nurse can still document that section manually at any time. AI never
+blocks a clinical action (PRD 5.9). Safety flags (e.g. a penicillin-allergy collision) are
+surfaced prominently but still never block — the clinician decides.
+
+## The step tracker = clinical progress
+
+The tracker at the top reflects **actual progress through the workflow**, not scroll position:
+a step **ticks** once its work is done, the first unfinished step is **current**, later steps
+are **pale**. It's the single guide for "where am I" — which is why sections no longer carry
+their own "waiting/locked" notes. Completion per step: Medical History (complaint drafted) ·
+Physical Examination (vitals recorded) · Diagnosis (a differential exists) · Laboratory (results
+back) · Procedures (≥1 added) · Perscribe (≥1 added) · Patient Movements (visit finalised).
 
 ## How this maps to the code
 

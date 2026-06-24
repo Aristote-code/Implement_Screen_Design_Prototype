@@ -18,7 +18,7 @@ import {
   type AiMode,
   type AiSuggestion,
 } from "@/data/consultation";
-import { AiSuggestions, AiTag, LockedNote } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag } from "./AiSuggestionCard";
 
 type Category = "Laboratory" | "Radiology" | "Audiology";
 
@@ -201,18 +201,15 @@ export default function Laboratory({
 
   return (
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
-      {aiMode === "suggest" && mode === "request" &&
-        (unlocked ? (
-          <AiSuggestions
-            heading="AI suggested investigations"
-            note="Proposed from the working differential — review before ordering."
-            suggestions={AI_LAB_SUGGESTIONS}
-            acceptLabel="Order"
-            onAccept={acceptAi}
-          />
-        ) : (
-          <LockedNote>Tests are ordered from the working differential — add a diagnosis first.</LockedNote>
-        ))}
+      {aiMode === "suggest" && mode === "request" && unlocked && (
+        <AiSuggestions
+          heading="AI suggested investigations"
+          note="Proposed from the working differential — review before ordering."
+          suggestions={AI_LAB_SUGGESTIONS}
+          acceptLabel="Order"
+          onAccept={acceptAi}
+        />
+      )}
 
       {ordered.length > 0 && mode === "request" && (
         <div className="mb-4 rounded-[12px] border border-[#e3f1ee] bg-[#f7fbfa] p-3">

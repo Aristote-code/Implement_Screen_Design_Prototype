@@ -68,7 +68,7 @@ export default function PatientMovement({
         <h2 className="text-[20px] font-bold text-[#111827]">Patient Movement</h2>
         {!allReviewed && (
           <span className="text-[13px] text-[#687588]">
-            {reviewedCount} of {totalSteps} sections reviewed — visit each step tab to unlock sign-off
+            {reviewedCount} of {totalSteps} steps complete — finish the consultation to unlock sign-off
           </span>
         )}
       </div>

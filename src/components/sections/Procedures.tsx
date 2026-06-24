@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Plus, Check, Trash2 } from "lucide-react";
 import {
   PROCEDURE_TABS,
@@ -11,7 +11,7 @@ import {
   type AiSuggestion,
 } from "@/data/consultation";
 import SelectField from "./SelectField";
-import { AiSuggestions, AiTag, LockedNote } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag } from "./AiSuggestionCard";
 
 interface SubmittedItem {
   id: string;
@@ -28,7 +28,15 @@ function Checkbox({ on }: { on: boolean }) {
   );
 }
 
-export default function Procedures({ aiMode = "none", unlocked = true }: { aiMode?: AiMode; unlocked?: boolean }) {
+export default function Procedures({
+  aiMode = "none",
+  unlocked = true,
+  onCountChange,
+}: {
+  aiMode?: AiMode;
+  unlocked?: boolean;
+  onCountChange?: (n: number) => void;
+}) {
   const [tab, setTab] = useState(aiMode === "accepted" ? "Submitted Procedures" : PROCEDURE_TABS[0]);
   const [serviceTab, setServiceTab] = useState(SERVICE_TABS[0]);
   const [procedure, setProcedure] = useState<string>();
@@ -41,6 +49,11 @@ export default function Procedures({ aiMode = "none", unlocked = true }: { aiMod
       : [],
   );
   const [nextId, setNextId] = useState(1);
+
+  // Report submitted count up so the step tracker can tick the Procedures step.
+  useEffect(() => {
+    onCountChange?.(submitted.length);
+  }, [submitted.length, onCountChange]);
 
   const config = PROCEDURE_SERVICES[serviceTab];
   const items = config.items.filter((i) => i.toLowerCase().includes(search.trim().toLowerCase()));
@@ -77,18 +90,14 @@ export default function Procedures({ aiMode = "none", unlocked = true }: { aiMod
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
       <h2 className="text-[20px] font-bold text-[#111827]">Procedures</h2>
 
-      {aiMode === "suggest" && (
+      {aiMode === "suggest" && unlocked && (
         <div className="mt-5">
-          {unlocked ? (
-            <AiSuggestions
-              heading="AI procedure suggestions"
-              note="Suggested from the confirmed diagnosis and what was heard in the consultation. Accept to add to submitted procedures."
-              suggestions={AI_PROCEDURE_SUGGESTIONS}
-              onAccept={acceptAi}
-            />
-          ) : (
-            <LockedNote>AI procedure suggestions appear once the working diagnosis is confirmed.</LockedNote>
-          )}
+          <AiSuggestions
+            heading="AI procedure suggestions"
+            note="Suggested from the confirmed diagnosis and what was heard in the consultation. Accept to add to submitted procedures."
+            suggestions={AI_PROCEDURE_SUGGESTIONS}
+            onAccept={acceptAi}
+          />
         </div>
       )}
 

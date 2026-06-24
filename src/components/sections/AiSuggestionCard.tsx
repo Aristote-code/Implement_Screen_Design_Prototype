@@ -1,18 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { Sparkles, Check, X, AlertTriangle, Lock, CheckCircle2 } from "lucide-react";
+import { Sparkles, Check, X, AlertTriangle, CheckCircle2 } from "lucide-react";
 import type { AiBasis, AiSuggestion } from "@/data/consultation";
-
-// Waiting state for a section whose clinical prerequisite isn't met yet. This is ADVISORY,
-// not a hard lock — the nurse can still document the section manually; only the AI
-// suggestions hold back until the step they depend on is done.
-export function LockedNote({ children }: { children: ReactNode }) {
-  return (
-    <div className="mb-4 flex items-center gap-2.5 rounded-[12px] border border-dashed border-[#d9dde3] bg-[#fafbfc] px-4 py-3 text-[13px] text-[#9aa6b6]">
-      <Lock className="size-4 shrink-0" />
-      <span>{children}</span>
-    </div>
-  );
-}
 
 // Green confirmation that a workflow step is complete (e.g. "vital signs recorded").
 export function StepDone({ children }: { children: ReactNode }) {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Trash2, ArrowRight } from "lucide-react";
 import { DIAGNOSIS_OPTIONS, AI_DIAGNOSIS_SUGGESTIONS, type AiBasis, type AiMode, type AiSuggestion } from "@/data/consultation";
 import SelectField from "./SelectField";
-import { AiSuggestions, AiTag, LockedNote, StepDone } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag, StepDone } from "./AiSuggestionCard";
 
 interface DiagEntry {
   id: string;
@@ -55,17 +55,14 @@ export default function DifferentialDiagnosis({
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
       <h2 className="mb-5 text-[20px] font-bold text-[#111827]">Differential Diagnosis</h2>
 
-      {aiMode === "suggest" &&
-        (unlocked ? (
-          <AiSuggestions
-            heading="AI differential suggestions"
-            note="Reasoned from the chief complaint and the vital signs you recorded. Accept to add to the differential."
-            suggestions={AI_DIAGNOSIS_SUGGESTIONS}
-            onAccept={accept}
-          />
-        ) : (
-          <LockedNote>The AI differential becomes available once vital signs are recorded.</LockedNote>
-        ))}
+      {aiMode === "suggest" && unlocked && (
+        <AiSuggestions
+          heading="AI differential suggestions"
+          note="Reasoned from the chief complaint and the vital signs you recorded. Accept to add to the differential."
+          suggestions={AI_DIAGNOSIS_SUGGESTIONS}
+          onAccept={accept}
+        />
+      )}
 
       {entries.length > 0 && (
         <div className="mb-4 space-y-2">

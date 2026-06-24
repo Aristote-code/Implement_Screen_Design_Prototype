@@ -142,8 +142,6 @@ export default function PatientFile({
   onStopRecording: () => void;
   onCompleteVisit: () => void;
 }) {
-  const [activeStep, setActiveStep] = useState(0);
-  const [visitedSteps, setVisitedSteps] = useState<Set<number>>(new Set([0]));
   const [panelTab, setPanelTab] = useState<PanelTab>("Medical Info");
   const [highlight, setHighlight] = useState<SourceHighlight | null>(null);
   const sourceClicks = useRef(0);
@@ -153,43 +151,6 @@ export default function PatientFile({
   useEffect(() => {
     setPanelTab(mode === "idle" ? "Medical Info" : "AI assistant");
   }, [mode]);
-
-  // Scroll-spy: as the nurse scrolls through the sections, the tracker ticks the
-  // steps off one by one and advances the active step. Visited steps stay checked.
-  useEffect(() => {
-    function spy() {
-      const line = 220; // activation line, just below the sticky top bar + step tracker
-      const els = sectionRefs.current;
-      let current = 0;
-      for (let i = 0; i < els.length; i++) {
-        const el = els[i];
-        if (el && el.getBoundingClientRect().top <= line) current = i;
-      }
-      // Snap to the last step once scrolled to the very bottom.
-      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
-        current = els.length - 1;
-      }
-      setActiveStep(current);
-      setVisitedSteps((prev) => {
-        let changed = false;
-        const next = new Set(prev);
-        for (let i = 0; i <= current; i++) {
-          if (!next.has(i)) {
-            next.add(i);
-            changed = true;
-          }
-        }
-        return changed ? next : prev;
-      });
-    }
-    spy();
-    window.addEventListener("scroll", spy, { passive: true });
-    window.addEventListener("resize", spy);
-    return () => {
-      window.removeEventListener("scroll", spy);
-      window.removeEventListener("resize", spy);
-    };
-  }, []);
 
   // Flow: after recording the AI does NOT auto-commit downstream sections. It surfaces
   // advisory suggestions the clinician accepts/dismisses ("suggest"). Once finalised, the
@@ -207,6 +168,26 @@ export default function PatientFile({
   const [differentialCount, setDifferentialCount] = useState(0);
   const [labResultsReady, setLabResultsReady] = useState(flowComplete);
   const [diagnosisConfirmed, setDiagnosisConfirmed] = useState(flowComplete);
+  const [procedureCount, setProcedureCount] = useState(0);
+  const [prescriptionCount, setPrescriptionCount] = useState(0);
+
+  // The step tracker reflects ACTUAL clinical progress (not scroll): a step ticks once its
+  // work is done, the first unfinished step is "current", later steps are pale. The order
+  // matches CONSULTATION_STEPS and the completion is monotonic, so the first unfinished index
+  // is the active step.
+  const stepDone = [
+    aiMode !== "none", // Medical History — chief complaint drafted/available
+    vitalsRecorded, // Physical Examination — vitals measured
+    differentialCount > 0, // Diagnosis — a working differential exists
+    labResultsReady, // Laboratory — results back from the technician
+    procedureCount > 0, // Procedures
+    prescriptionCount > 0, // Perscribe
+    aiMode === "accepted", // Patient Movements — visit finalised
+  ];
+  const firstUnfinished = stepDone.indexOf(false);
+  const activeStep = firstUnfinished === -1 ? CONSULTATION_STEPS.length : firstUnfinished;
+  // Visit is signable once the clinical steps (history → prescribe) are complete.
+  const clinicalDone = stepDone.slice(0, 6).filter(Boolean).length;
 
   // "Source" on any AI-added field opens the AI transcription and highlights the cited turns.
   const viewSource = useCallback((turns: number[]) => {
@@ -220,14 +201,9 @@ export default function PatientFile({
     [viewSource, highlight],
   );
 
-  // Clicking a tracker step scrolls to its section (and checks everything up to it).
+  // Clicking a tracker step just scrolls to its section — it does not change progress
+  // (progress is driven by the clinical workflow, not navigation).
   function handleStepClick(i: number) {
-    setActiveStep(i);
-    setVisitedSteps((prev) => {
-      const next = new Set(prev);
-      for (let k = 0; k <= i; k++) next.add(k);
-      return next;
-    });
     sectionRefs.current[i]?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -301,17 +277,17 @@ export default function PatientFile({
             />
           </div>
           <div ref={(el) => { sectionRefs.current[4] = el; }} className="scroll-mt-[220px]">
-            <Procedures aiMode={aiMode} unlocked={diagnosisConfirmed} />
+            <Procedures aiMode={aiMode} unlocked={diagnosisConfirmed} onCountChange={setProcedureCount} />
           </div>
           <div ref={(el) => { sectionRefs.current[5] = el; }} className="scroll-mt-[220px]">
-            <Prescribe aiMode={aiMode} unlocked={diagnosisConfirmed} />
+            <Prescribe aiMode={aiMode} unlocked={diagnosisConfirmed} onCountChange={setPrescriptionCount} />
           </div>
           <div ref={(el) => { sectionRefs.current[6] = el; }} className="scroll-mt-[220px]">
             <PatientMovement
               patient={patient}
               onCompleteVisit={onCompleteVisit}
-              reviewedCount={visitedSteps.size}
-              totalSteps={CONSULTATION_STEPS.length}
+              reviewedCount={clinicalDone}
+              totalSteps={6}
             />
           </div>
         </div>
