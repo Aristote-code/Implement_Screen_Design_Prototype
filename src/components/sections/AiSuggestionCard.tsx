@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Sparkles, ArrowUpRight, BookOpen, Check, X, AlertTriangle, Lock, CheckCircle2 } from "lucide-react";
-import { useSource } from "@/components/SourceContext";
+import { Sparkles, Check, X, AlertTriangle, Lock, CheckCircle2 } from "lucide-react";
 import type { AiBasis, AiSuggestion } from "@/data/consultation";
 
 // Waiting state for a section whose clinical prerequisite isn't met yet. This is ADVISORY,
@@ -38,28 +37,17 @@ function WarningNote({ warning }: { warning: NonNullable<AiBasis["warning"]> }) 
   );
 }
 
-// The "why" behind an AI output. Transcript-backed → a Source link that jumps to the
-// transcription. Knowledge-backed → a guideline reference chip. Often a plain rationale too.
+// The "why" behind an AI output. Provenance is stated in plain words (not a link or chip, to
+// keep it uncluttered): transcript-backed → "from the consultation"; knowledge-backed → the
+// cited guideline. The rationale carries the clinical reasoning.
 function Why({ basis }: { basis: AiBasis }) {
-  const ctx = useSource();
+  const notes: string[] = [];
+  if (basis.source) notes.push("From what was said during the consultation.");
+  if (basis.guideline) notes.push(`From clinical guidance — ${basis.guideline}.`);
   return (
     <div className="space-y-1.5 text-[12px] leading-relaxed text-[#687588]">
       {basis.rationale && <p>{basis.rationale}</p>}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        {basis.source && (
-          <button
-            onClick={() => ctx?.view(basis.source!)}
-            className="inline-flex items-center gap-1 font-semibold text-[#0b9487] hover:text-[#0a8478]"
-          >
-            <ArrowUpRight className="size-3.5" /> Heard in consultation — view source
-          </button>
-        )}
-        {basis.guideline && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#eef2ff] px-2 py-0.5 font-semibold text-[#4f46e5]">
-            <BookOpen className="size-3" /> {basis.guideline}
-          </span>
-        )}
-      </div>
+      {notes.length > 0 && <p className="font-medium text-[#9aa6b6]">{notes.join(" ")}</p>}
     </div>
   );
 }
