@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Mic, CheckCircle2, Pencil, Sparkles } from "lucide-react";
+import { Mic, CheckCircle2, Pencil } from "lucide-react";
 import type { Patient } from "@/data/patients";
 import {
   CONSULTATION_STEPS,
@@ -72,16 +72,8 @@ function Banner({ mode, onStart, onStop }: { mode: PatientFileMode; onStart: () 
         </div>
       </div>
     );
-  if (mode === "warning")
-    return (
-      <div className="flex items-start gap-2.5 rounded-[10px] bg-[#f1fefa] px-5 py-3 shadow-[0_5px_15px_0_rgba(0,0,0,0.05)]">
-        <Sparkles className="mt-0.5 size-4 shrink-0 text-[#0b9487]" />
-        <span className="text-[14px] font-medium leading-relaxed text-[#111827]">
-          Recording processed. The AI drafted the chief complaint and will suggest next steps{" "}
-          <span className="font-bold">in clinical order</span> — record vitals first, then review and confirm each suggestion before signing.
-        </span>
-      </div>
-    );
+  // Post-recording success is shown as a toast (in App), not a banner here.
+  if (mode === "warning") return null;
   if (mode === "declined")
     return (
       <div className="rounded-[14px] bg-[#fef6e0] px-5 py-3.5">
