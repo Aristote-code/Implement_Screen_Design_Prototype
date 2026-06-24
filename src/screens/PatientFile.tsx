@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Mic, CheckCircle2, Pencil } from "lucide-react";
+import { Mic, CheckCircle2, Pencil, Sparkles } from "lucide-react";
 import type { Patient } from "@/data/patients";
 import {
   CONSULTATION_STEPS,
@@ -72,7 +72,16 @@ function Banner({ mode, onStart, onStop }: { mode: PatientFileMode; onStart: () 
         </div>
       </div>
     );
-  if (mode === "warning") return null;
+  if (mode === "warning")
+    return (
+      <div className="flex items-start gap-2.5 rounded-[10px] bg-[#f1fefa] px-5 py-3 shadow-[0_5px_15px_0_rgba(0,0,0,0.05)]">
+        <Sparkles className="mt-0.5 size-4 shrink-0 text-[#0b9487]" />
+        <span className="text-[14px] font-medium leading-relaxed text-[#111827]">
+          Recording processed. The AI drafted the chief complaint and will suggest next steps{" "}
+          <span className="font-bold">in clinical order</span> — record vitals first, then review and confirm each suggestion before signing.
+        </span>
+      </div>
+    );
   if (mode === "declined")
     return (
       <div className="rounded-[14px] bg-[#fef6e0] px-5 py-3.5">
@@ -195,6 +204,18 @@ export default function PatientFile({
   // accepted items are shown committed + locked ("accepted").
   const aiMode: AiMode = mode === "warning" ? "suggest" : mode === "finalised" ? "accepted" : "none";
 
+  // Clinical workflow gating. AI suggestions in each section only surface once the step they
+  // depend on is done — mirroring the real sequence: vitals → differential → order labs →
+  // results back → confirm diagnosis → procedures/prescriptions. This gates SUGGESTIONS only;
+  // the nurse can still document any section manually at any time. In finalised ("accepted")
+  // mode the whole chain is already complete. (PatientFile remounts per mode, so these
+  // initialise correctly each time a mode is entered.)
+  const flowComplete = aiMode === "accepted";
+  const [vitalsRecorded, setVitalsRecorded] = useState(flowComplete);
+  const [differentialCount, setDifferentialCount] = useState(0);
+  const [labResultsReady, setLabResultsReady] = useState(flowComplete);
+  const [diagnosisConfirmed, setDiagnosisConfirmed] = useState(flowComplete);
+
   // "Source" on any AI-added field opens the AI transcription and highlights the cited turns.
   const viewSource = useCallback((turns: number[]) => {
     sourceClicks.current += 1;
@@ -267,19 +288,31 @@ export default function PatientFile({
           </div>
 
           <div ref={(el) => { sectionRefs.current[1] = el; }} className="scroll-mt-[220px]">
-            <VitalSigns advisory={aiMode !== "none"} />
+            <VitalSigns aiMode={aiMode} recorded={vitalsRecorded} onRecord={() => setVitalsRecorded(true)} />
           </div>
           <div ref={(el) => { sectionRefs.current[2] = el; }} className="scroll-mt-[220px]">
-            <DifferentialDiagnosis aiMode={aiMode} />
+            <DifferentialDiagnosis
+              aiMode={aiMode}
+              unlocked={vitalsRecorded}
+              resultsReady={labResultsReady}
+              diagnosisConfirmed={diagnosisConfirmed}
+              onCountChange={setDifferentialCount}
+              onConfirmDiagnosis={() => setDiagnosisConfirmed(true)}
+            />
           </div>
           <div ref={(el) => { sectionRefs.current[3] = el; }} className="scroll-mt-[220px]">
-            <Laboratory aiMode={aiMode} />
+            <Laboratory
+              aiMode={aiMode}
+              unlocked={differentialCount > 0}
+              resultsReady={labResultsReady}
+              onResultsReady={() => setLabResultsReady(true)}
+            />
           </div>
           <div ref={(el) => { sectionRefs.current[4] = el; }} className="scroll-mt-[220px]">
-            <Procedures aiMode={aiMode} />
+            <Procedures aiMode={aiMode} unlocked={diagnosisConfirmed} />
           </div>
           <div ref={(el) => { sectionRefs.current[5] = el; }} className="scroll-mt-[220px]">
-            <Prescribe aiMode={aiMode} />
+            <Prescribe aiMode={aiMode} unlocked={diagnosisConfirmed} />
           </div>
           <div ref={(el) => { sectionRefs.current[6] = el; }} className="scroll-mt-[220px]">
             <PatientMovement

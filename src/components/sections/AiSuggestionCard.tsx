@@ -1,7 +1,29 @@
-import { useState } from "react";
-import { Sparkles, ArrowUpRight, BookOpen, Check, X, AlertTriangle } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Sparkles, ArrowUpRight, BookOpen, Check, X, AlertTriangle, Lock, CheckCircle2 } from "lucide-react";
 import { useSource } from "@/components/SourceContext";
 import type { AiBasis, AiSuggestion } from "@/data/consultation";
+
+// Waiting state for a section whose clinical prerequisite isn't met yet. This is ADVISORY,
+// not a hard lock — the nurse can still document the section manually; only the AI
+// suggestions hold back until the step they depend on is done.
+export function LockedNote({ children }: { children: ReactNode }) {
+  return (
+    <div className="mb-4 flex items-center gap-2.5 rounded-[12px] border border-dashed border-[#d9dde3] bg-[#fafbfc] px-4 py-3 text-[13px] text-[#9aa6b6]">
+      <Lock className="size-4 shrink-0" />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+// Green confirmation that a workflow step is complete (e.g. "vital signs recorded").
+export function StepDone({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 rounded-[12px] border border-[#bfe6d4] bg-[#eafaf2] px-4 py-2.5 text-[13px] font-semibold text-[#1f7a55]">
+      <CheckCircle2 className="size-4 shrink-0" />
+      <span>{children}</span>
+    </div>
+  );
+}
 
 // Safety flag (allergy collision / interaction / dose). Surfaced prominently — never blocks.
 function WarningNote({ warning }: { warning: NonNullable<AiBasis["warning"]> }) {

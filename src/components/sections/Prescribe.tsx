@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Pill, ArrowRight, Printer, Trash2 } from "lucide-react";
 import { MEDICINE_OPTIONS, AI_PRESCRIPTION_SUGGESTIONS, type AiBasis, type AiMode, type AiSuggestion } from "@/data/consultation";
 import SelectField from "./SelectField";
-import { AiSuggestions, AiTag } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag, LockedNote } from "./AiSuggestionCard";
 
 interface Rx {
   id: string;
@@ -12,7 +12,7 @@ interface Rx {
   basis?: AiBasis;
 }
 
-export default function Prescribe({ aiMode = "none" }: { aiMode?: AiMode }) {
+export default function Prescribe({ aiMode = "none", unlocked = true }: { aiMode?: AiMode; unlocked?: boolean }) {
   const [medicine, setMedicine] = useState<string>();
   const [quantity, setQuantity] = useState("");
   const [duration, setDuration] = useState("");
@@ -46,15 +46,18 @@ export default function Prescribe({ aiMode = "none" }: { aiMode?: AiMode }) {
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
       <h2 className="mb-5 text-[20px] font-bold text-[#111827]">Prescribe</h2>
 
-      {aiMode === "suggest" && (
-        <AiSuggestions
-          heading="AI medication suggestions"
-          note="Based on the working diagnosis. Each is checked against the patient's allergies and current medication. Accept to add to the prescription."
-          suggestions={AI_PRESCRIPTION_SUGGESTIONS}
-          acceptLabel="Prescribe"
-          onAccept={acceptAi}
-        />
-      )}
+      {aiMode === "suggest" &&
+        (unlocked ? (
+          <AiSuggestions
+            heading="AI medication suggestions"
+            note="Based on the confirmed diagnosis. Each is checked against the patient's allergies and current medication. Accept to add to the prescription."
+            suggestions={AI_PRESCRIPTION_SUGGESTIONS}
+            acceptLabel="Prescribe"
+            onAccept={acceptAi}
+          />
+        ) : (
+          <LockedNote>AI medication suggestions appear once the working diagnosis is confirmed.</LockedNote>
+        ))}
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         {/* Left: medicine + form */}

@@ -11,7 +11,7 @@ import {
   type AiSuggestion,
 } from "@/data/consultation";
 import SelectField from "./SelectField";
-import { AiSuggestions, AiTag } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag, LockedNote } from "./AiSuggestionCard";
 
 interface SubmittedItem {
   id: string;
@@ -28,7 +28,7 @@ function Checkbox({ on }: { on: boolean }) {
   );
 }
 
-export default function Procedures({ aiMode = "none" }: { aiMode?: AiMode }) {
+export default function Procedures({ aiMode = "none", unlocked = true }: { aiMode?: AiMode; unlocked?: boolean }) {
   const [tab, setTab] = useState(aiMode === "accepted" ? "Submitted Procedures" : PROCEDURE_TABS[0]);
   const [serviceTab, setServiceTab] = useState(SERVICE_TABS[0]);
   const [procedure, setProcedure] = useState<string>();
@@ -79,12 +79,16 @@ export default function Procedures({ aiMode = "none" }: { aiMode?: AiMode }) {
 
       {aiMode === "suggest" && (
         <div className="mt-5">
-          <AiSuggestions
-            heading="AI procedure suggestions"
-            note="Suggested from the differential and what was heard in the consultation. Accept to add to submitted procedures."
-            suggestions={AI_PROCEDURE_SUGGESTIONS}
-            onAccept={acceptAi}
-          />
+          {unlocked ? (
+            <AiSuggestions
+              heading="AI procedure suggestions"
+              note="Suggested from the confirmed diagnosis and what was heard in the consultation. Accept to add to submitted procedures."
+              suggestions={AI_PROCEDURE_SUGGESTIONS}
+              onAccept={acceptAi}
+            />
+          ) : (
+            <LockedNote>AI procedure suggestions appear once the working diagnosis is confirmed.</LockedNote>
+          )}
         </div>
       )}
 

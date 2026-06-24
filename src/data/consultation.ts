@@ -71,10 +71,10 @@ export const VITALS_LATEST: VitalRow[] = [
 ];
 export const VITAL_GROUPS = ["Yesterday: 02:00 pa", "Today: 08:00 am", "Today: 06:00 pm"];
 
-// Advisory shown beneath the vitals while a consultation is being documented. It REASONS
-// over the recorded values (PRD 5.9) — it does not author them, and has no transcript source.
-export const VITAL_ADVISORY =
-  "Respiratory rate ~50–60/min is outside the normal range. Consider re-checking oxygen saturation and escalating the respiratory assessment. Advisory only — based on the values you recorded.";
+// Vital signs carry NO AI. They are measured by the nurse at the bedside with equipment.
+// The AI never fills them, never sources them, and shows no advisory on them. Any reasoning
+// that *uses* a vital value lives downstream — in the differential / treatment suggestions,
+// which reference "the vitals you recorded".
 
 // --- Differential diagnosis ---
 export const DIAGNOSIS_OPTIONS = ["HP: Health post diagnosis", "Presumptive diagnosis", "Confirmed diagnosis"];
@@ -113,11 +113,28 @@ export interface LabResult {
   result: string;
   status: "within" | "below" | "high";
   comment: string;
+  // AI's read on an ABNORMAL result — what it might indicate. Shown only on out-of-range rows.
+  // The result value itself comes from the technician; the AI only interprets it.
+  aiFlag?: string;
 }
 export const LAB_RESULTS: LabResult[] = [
   { test: "Peripheral Blood Smear", range: "4.0 – 11.0", result: "8.2", status: "within", comment: "Comment goes here" },
-  { test: "Protein in Urine (Albuminuria)", range: "0 – 20", result: "35", status: "below", comment: "Comment goes here" },
-  { test: "Hemoglobin - HGB", range: "13.0 – 17.0", result: "10.1", status: "high", comment: "2024/08/06 09:32:21" },
+  {
+    test: "Protein in Urine (Albuminuria)",
+    range: "0 – 20",
+    result: "35",
+    status: "high",
+    comment: "Comment goes here",
+    aiFlag: "Above range — proteinuria. Correlate with blood pressure and renal function.",
+  },
+  {
+    test: "Hemoglobin - HGB",
+    range: "13.0 – 17.0",
+    result: "10.1",
+    status: "below",
+    comment: "2024/08/06 09:32:21",
+    aiFlag: "Below range — mild anaemia, which may be contributing to the breathlessness.",
+  },
 ];
 
 // Radiology — request groups + results.

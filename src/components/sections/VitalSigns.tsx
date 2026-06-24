@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { HeartPulse, Activity, Thermometer, Wind, Scale, ArrowDown, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
-import { VITALS_LATEST, VITAL_GROUPS, VITAL_ADVISORY, type VitalRow } from "@/data/consultation";
+import { HeartPulse, Activity, Thermometer, Wind, Scale, ArrowDown, ChevronDown, ChevronRight } from "lucide-react";
+import { VITALS_LATEST, VITAL_GROUPS, type VitalRow, type AiMode } from "@/data/consultation";
+import { StepDone } from "./AiSuggestionCard";
 
 const ICONS: Record<VitalRow["key"], typeof HeartPulse> = {
   pb: HeartPulse,
@@ -38,8 +39,17 @@ function Row({ row }: { row: VitalRow }) {
   );
 }
 
-export default function VitalSigns({ advisory = false }: { advisory?: boolean }) {
+export default function VitalSigns({
+  aiMode = "none",
+  recorded = false,
+  onRecord,
+}: {
+  aiMode?: AiMode;
+  recorded?: boolean;
+  onRecord?: () => void;
+}) {
   const [openGroup, setOpenGroup] = useState(0);
+  const done = recorded || aiMode === "accepted";
 
   return (
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
@@ -50,6 +60,15 @@ export default function VitalSigns({ advisory = false }: { advisory?: boolean })
           <button className="text-[#2f78ee]">Expand all</button>
         </div>
       </div>
+
+      {/* Vitals are measured by the nurse — no AI. In a live consultation this is the step
+          that must be done before the AI will suggest a differential. */}
+      {aiMode === "suggest" && !recorded && (
+        <p className="mt-2 text-[13px] leading-relaxed text-[#687588]">
+          Measured at the bedside by the nurse. Record this visit's vital signs to continue — the AI differential
+          becomes available once they're in.
+        </p>
+      )}
 
       <div className="mt-5 space-y-3">
         {VITAL_GROUPS.map((group, i) => {
@@ -79,19 +98,18 @@ export default function VitalSigns({ advisory = false }: { advisory?: boolean })
         })}
       </div>
 
-      {advisory && (
-        <div className="mt-5 flex items-start gap-2.5 rounded-[12px] border border-[#cdeee9] bg-[#f6fffd] px-4 py-3">
-          <Sparkles className="mt-0.5 size-4 shrink-0 text-[#0b9487]" />
-          <div>
-            <span className="text-[12px] font-bold text-[#0b9487]">AI advisory</span>
-            <p className="mt-0.5 text-[12px] leading-relaxed text-[#687588]">{VITAL_ADVISORY}</p>
-          </div>
+      {done && (
+        <div className="mt-5">
+          <StepDone>Vital signs recorded for this visit</StepDone>
         </div>
       )}
 
       <div className="mt-5 flex flex-wrap gap-3">
-        <button className="rounded-[10px] bg-[#2f78ee] px-5 py-3 text-[14px] font-bold text-white transition-colors hover:bg-[#2a6cd8]">
-          Add vital signs
+        <button
+          onClick={aiMode === "suggest" && !recorded ? onRecord : undefined}
+          className="rounded-[10px] bg-[#2f78ee] px-5 py-3 text-[14px] font-bold text-white transition-colors hover:bg-[#2a6cd8]"
+        >
+          {aiMode === "suggest" && !recorded ? "Record vital signs" : "Add vital signs"}
         </button>
         <button className="rounded-[10px] bg-[#2f78ee] px-5 py-3 text-[14px] font-bold text-white transition-colors hover:bg-[#2a6cd8]">
           Start triage assessment

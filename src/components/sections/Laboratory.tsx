@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Plus, ArrowRight, CheckCircle2, X, Sparkles, Trash2 } from "lucide-react";
+import { Search, Plus, ArrowRight, CheckCircle2, X, Sparkles, Trash2, AlertTriangle, FlaskConical } from "lucide-react";
 import {
   LAB_CATEGORIES,
   LAB_SAMPLES,
@@ -18,7 +18,7 @@ import {
   type AiMode,
   type AiSuggestion,
 } from "@/data/consultation";
-import { AiSuggestions, AiTag } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag, LockedNote } from "./AiSuggestionCard";
 
 type Category = "Laboratory" | "Radiology" | "Audiology";
 
@@ -81,7 +81,7 @@ const STATUS: Record<LabResult["status"], { label: string; cls: string }> = {
   high: { label: "Not in normal range", cls: "text-[#e03137]" },
 };
 
-function LabResultTable() {
+function LabResultTable({ showAi }: { showAi: boolean }) {
   return (
     <div className="mt-4 overflow-x-auto">
       <div className="min-w-[640px]">
@@ -92,16 +92,27 @@ function LabResultTable() {
           <span>Comment</span>
         </div>
         {LAB_RESULTS.map((r, i) => (
-          <div key={i} className="grid grid-cols-[1.4fr_1fr_1fr_1.4fr] items-center gap-3 border-b border-[#f1f2f4] px-2 py-3 text-[14px] text-[#111827]">
-            <span className="font-medium">{r.test}</span>
-            <span className="text-[#687588]">{r.range}</span>
-            <span>
-              <span className="font-bold">{r.result}</span>
-              <span className={`mt-0.5 flex items-center gap-1 text-[11px] font-semibold ${STATUS[r.status].cls}`}>
-                <span className="size-1.5 rounded-full bg-current" /> {STATUS[r.status].label}
+          <div key={i}>
+            <div className="grid grid-cols-[1.4fr_1fr_1fr_1.4fr] items-center gap-3 border-b border-[#f1f2f4] px-2 py-3 text-[14px] text-[#111827]">
+              <span className="font-medium">{r.test}</span>
+              <span className="text-[#687588]">{r.range}</span>
+              <span>
+                <span className="font-bold">{r.result}</span>
+                <span className={`mt-0.5 flex items-center gap-1 text-[11px] font-semibold ${STATUS[r.status].cls}`}>
+                  <span className="size-1.5 rounded-full bg-current" /> {STATUS[r.status].label}
+                </span>
               </span>
-            </span>
-            <span className="text-[13px] text-[#687588]">{r.comment}</span>
+              <span className="text-[13px] text-[#687588]">{r.comment}</span>
+            </div>
+            {showAi && r.aiFlag && (
+              <div className="mx-2 mb-2 flex items-start gap-2 rounded-[8px] border border-[#f3d9b0] bg-[#fff8ec] px-3 py-2 text-[12px] leading-relaxed text-[#9a6a00]">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  <span className="font-bold">AI flag · </span>
+                  {r.aiFlag}
+                </span>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -132,7 +143,17 @@ function ViewResultTable({ rows, commentLabel }: { rows: { test: string; comment
   );
 }
 
-export default function Laboratory({ aiMode = "none" }: { aiMode?: AiMode }) {
+export default function Laboratory({
+  aiMode = "none",
+  unlocked = true,
+  resultsReady = false,
+  onResultsReady,
+}: {
+  aiMode?: AiMode;
+  unlocked?: boolean;
+  resultsReady?: boolean;
+  onResultsReady?: () => void;
+}) {
   const [category, setCategory] = useState<Category>("Laboratory");
   const [mode, setMode] = useState<"request" | "result">("request");
   const [sample, setSample] = useState(LAB_SAMPLES[0]);
@@ -180,15 +201,18 @@ export default function Laboratory({ aiMode = "none" }: { aiMode?: AiMode }) {
 
   return (
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
-      {aiMode === "suggest" && mode === "request" && (
-        <AiSuggestions
-          heading="AI suggested investigations"
-          note="Tests proposed from the symptoms and the working differential — review before ordering."
-          suggestions={AI_LAB_SUGGESTIONS}
-          acceptLabel="Order"
-          onAccept={acceptAi}
-        />
-      )}
+      {aiMode === "suggest" && mode === "request" &&
+        (unlocked ? (
+          <AiSuggestions
+            heading="AI suggested investigations"
+            note="Proposed from the working differential — review before ordering."
+            suggestions={AI_LAB_SUGGESTIONS}
+            acceptLabel="Order"
+            onAccept={acceptAi}
+          />
+        ) : (
+          <LockedNote>Tests are ordered from the working differential — add a diagnosis first.</LockedNote>
+        ))}
 
       {ordered.length > 0 && mode === "request" && (
         <div className="mb-4 rounded-[12px] border border-[#e3f1ee] bg-[#f7fbfa] p-3">
@@ -330,37 +354,58 @@ export default function Laboratory({ aiMode = "none" }: { aiMode?: AiMode }) {
       )}
 
       {/* ---------- RESULT ---------- */}
-      {mode === "result" && (
-        <>
-          <div className="mt-5 flex items-center gap-2 rounded-[10px] border border-[#bfe6d4] bg-[#eafaf2] px-4 py-3">
-            <CheckCircle2 className="size-5 shrink-0 text-[#2f9d6e]" />
-            <span className="text-[14px] font-medium text-[#2f9d6e]">{RESULT_BY[category]}</span>
+      {mode === "result" &&
+        (category === "Laboratory" && aiMode === "suggest" && !resultsReady ? (
+          // Results come from the technician, not the AI. Until they're entered, the AI has
+          // nothing to interpret — so show the waiting state, not an empty interpretation.
+          <div className="mt-5 rounded-[12px] border border-dashed border-[#d9dde3] bg-[#fafbfc] px-4 py-6 text-center">
+            <FlaskConical className="mx-auto size-6 text-[#9aa6b6]" />
+            <p className="mt-2 text-[14px] font-semibold text-[#111827]">Awaiting results from the lab technician</p>
+            <p className="mx-auto mt-1 max-w-[460px] text-[13px] leading-relaxed text-[#687588]">
+              {ordered.length
+                ? "Samples are being processed. The technician enters the results — then the AI flags anything abnormal."
+                : "Order tests on the request tab first; results are then entered by the technician."}
+            </p>
+            {ordered.length > 0 && (
+              <button
+                onClick={onResultsReady}
+                className="mt-3 inline-flex items-center gap-2 rounded-[10px] bg-[#2f78ee] px-4 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-[#2a6cd8]"
+              >
+                Mark results received
+              </button>
+            )}
           </div>
-
-          {aiMode !== "none" && category === "Laboratory" && (
-            <div className="mt-4 flex items-start gap-2.5 rounded-[12px] border border-[#cdeee9] bg-[#f6fffd] px-4 py-3">
-              <Sparkles className="mt-0.5 size-4 shrink-0 text-[#0b9487]" />
-              <div>
-                <span className="text-[12px] font-bold text-[#0b9487]">AI interpretation</span>
-                <span className="ml-2 rounded-full bg-[#0b9487]/10 px-2 py-0.5 text-[11px] font-semibold text-[#0b9487]">Advisory</span>
-                <p className="mt-1 text-[12px] leading-relaxed text-[#687588]">{AI_LAB_INTERPRETATION}</p>
-              </div>
+        ) : (
+          <>
+            <div className="mt-5 flex items-center gap-2 rounded-[10px] border border-[#bfe6d4] bg-[#eafaf2] px-4 py-3">
+              <CheckCircle2 className="size-5 shrink-0 text-[#2f9d6e]" />
+              <span className="text-[14px] font-medium text-[#2f9d6e]">{RESULT_BY[category]}</span>
             </div>
-          )}
 
-          {category === "Laboratory" && <LabResultTable />}
-
-          {category === "Radiology" &&
-            Object.entries(RADIOLOGY_RESULTS).map(([group, rows]) => (
-              <div key={group}>
-                <h3 className="mt-6 text-[16px] font-bold text-[#2f78ee]">{group}</h3>
-                <ViewResultTable rows={rows} commentLabel="Radiologist Comment" />
+            {aiMode !== "none" && category === "Laboratory" && (
+              <div className="mt-4 flex items-start gap-2.5 rounded-[12px] border border-[#cdeee9] bg-[#f6fffd] px-4 py-3">
+                <Sparkles className="mt-0.5 size-4 shrink-0 text-[#0b9487]" />
+                <div>
+                  <span className="text-[12px] font-bold text-[#0b9487]">AI interpretation</span>
+                  <span className="ml-2 rounded-full bg-[#0b9487]/10 px-2 py-0.5 text-[11px] font-semibold text-[#0b9487]">Advisory</span>
+                  <p className="mt-1 text-[12px] leading-relaxed text-[#687588]">{AI_LAB_INTERPRETATION}</p>
+                </div>
               </div>
-            ))}
+            )}
 
-          {category === "Audiology" && <ViewResultTable rows={AUDIOLOGY_RESULTS} commentLabel="Audiologist Comment" />}
-        </>
-      )}
+            {category === "Laboratory" && <LabResultTable showAi={aiMode !== "none"} />}
+
+            {category === "Radiology" &&
+              Object.entries(RADIOLOGY_RESULTS).map(([group, rows]) => (
+                <div key={group}>
+                  <h3 className="mt-6 text-[16px] font-bold text-[#2f78ee]">{group}</h3>
+                  <ViewResultTable rows={rows} commentLabel="Radiologist Comment" />
+                </div>
+              ))}
+
+            {category === "Audiology" && <ViewResultTable rows={AUDIOLOGY_RESULTS} commentLabel="Audiologist Comment" />}
+          </>
+        ))}
     </div>
   );
 }
