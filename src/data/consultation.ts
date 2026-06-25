@@ -254,6 +254,45 @@ export const SIGN_FINALISE_FIELDS: AiField[] = [
 
 export const QUALITY_GATE = "Complete — 8 fields extracted with high confidence · De-ID applied";
 
+// --- Journey D: reviewing-clinician queue (PRD §6 Journey D) ---
+// Consultations the quality gate flagged. The reviewer sees the flag reason, the transcript
+// span it was derived from, and the extracted data — then dismisses, requests review, or escalates.
+export interface ReviewItem {
+  patient: string;
+  identifier: string;
+  flagKind: "allergy" | "dose" | "contradiction";
+  flag: string;
+  transcript: string;
+  extracted: string;
+}
+export const REVIEW_QUEUE: ReviewItem[] = [
+  {
+    patient: "Abayo Yvette",
+    identifier: "GIKUN37353",
+    flagKind: "allergy",
+    flag: "Allergy collision — Amoxicillin prescribed to a patient allergic to Penicillins.",
+    transcript: 'Patient: "Last time amoxicillin gave me a bad rash all over."',
+    extracted: "Rx: Amoxicillin 500mg TID · Allergy on file: Penicillins",
+  },
+  {
+    patient: "Abraham Kamau",
+    identifier: "GIKUN37353",
+    flagKind: "dose",
+    flag: "Dose anomaly — Paracetamol 5 g/day exceeds the 4 g/day maximum.",
+    transcript: 'Nurse: "Take two grams, three times a day for the pain."',
+    extracted: "Rx: Paracetamol 2g × 3/day = 6g/day",
+  },
+  {
+    patient: "Ngoga Frank",
+    identifier: "GIKUN37353",
+    flagKind: "contradiction",
+    flag: "Contradiction — transcript states no fever, but a temperature of 39°C was recorded.",
+    transcript: 'Patient: "No fever, just the cough and a runny nose."',
+    extracted: "Vitals: Temp 39°C · HPI: “no fever”",
+  },
+];
+export const REVIEW_ACTIONS = ["Dismiss flag", "Request review", "Escalate"] as const;
+
 // --- AI advisory suggestions (PRD 5.9) ---
 // Each suggestion explains WHY: either it was heard in the consultation (`source`) or it
 // comes from clinical guidance (`guideline`). The clinician accepts or dismisses each.

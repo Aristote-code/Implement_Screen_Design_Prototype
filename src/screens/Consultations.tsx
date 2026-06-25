@@ -64,7 +64,7 @@ function ActionButton({
   );
 }
 
-export default function Consultations({ onSelectPatient }: { onSelectPatient?: (p: Patient) => void }) {
+export default function Consultations({ onSelectPatient, onOpenReview }: { onSelectPatient?: (p: Patient) => void; onOpenReview?: () => void }) {
   const [tab, setTab] = useState(TABS[0]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -76,7 +76,15 @@ export default function Consultations({ onSelectPatient }: { onSelectPatient?: (
       {/* Header + tabs */}
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4 border-b border-[#f1f2f4]">
         <div className="pb-5">
-          <h1 className="text-[24px] font-bold leading-tight text-[#111827]">Consultations (7)</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-[24px] font-bold leading-tight text-[#111827]">Consultations (7)</h1>
+            <button
+              onClick={onOpenReview}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#f3c0c0] bg-[#fdecec] px-3 py-1 text-[12px] font-bold text-[#b42318] transition-colors hover:bg-[#fce3e3]"
+            >
+              <span className="inline-block size-1.5 rounded-full bg-[#e03137]" /> Review queue (3)
+            </button>
+          </div>
           <p className="mt-1 text-[14px] text-[#687588]">Manage your consultations</p>
         </div>
         <nav className="flex items-center gap-6 sm:gap-8">

@@ -12,14 +12,21 @@ interface Rx {
   basis?: AiBasis;
 }
 
+export interface SafetyFlag {
+  label: string;
+  text: string;
+}
+
 export default function Prescribe({
   aiMode = "none",
   unlocked = true,
   onCountChange,
+  onFlagsChange,
 }: {
   aiMode?: AiMode;
   unlocked?: boolean;
   onCountChange?: (n: number) => void;
+  onFlagsChange?: (flags: SafetyFlag[]) => void;
 }) {
   const [medicine, setMedicine] = useState<string>();
   const [quantity, setQuantity] = useState("");
@@ -36,6 +43,12 @@ export default function Prescribe({
   useEffect(() => {
     onCountChange?.(list.length);
   }, [list.length, onCountChange]);
+
+  // Report any prescribed item that carries a safety flag (e.g. an allergy collision) up to
+  // sign-off — this is what the quality gate catches in Journey C.
+  useEffect(() => {
+    onFlagsChange?.(list.filter((r) => r.basis?.warning).map((r) => ({ label: r.medication, text: r.basis!.warning!.text })));
+  }, [list, onFlagsChange]);
 
   function reset() {
     setMedicine(undefined);

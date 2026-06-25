@@ -118,11 +118,13 @@ design this week — finish outstanding items, **add no new scope**. Status agai
 | 2 | "Why" reasoning on every AI suggestion | ✅ Done — `AiTag` "Why?" popover. NOTE: shown as plain words (Aristote's earlier call); Sandrine's existing impl uses a transcript **Source ↗ link** + a guideline note — open question whether to restore the clickable Source link. |
 | 3 | AI red flag for allergy/drug conflicts | ✅ Done — Amoxicillin shows a red flag; reword to "Check for allergies — this may be counter-effective." (PRD 5.9) |
 | 4 | Remove AI from vital signs | ✅ Done — vitals are nurse-measured; inline pencil→inputs→save entry form. |
-| 5 | Lab results — remove confirm/mark; auto-populate | ⬜ TODO — results come from the technician automatically; nurse never confirms them. AI's only lab roles: suggest tests (order side) + flag abnormal results. |
-| 6 | Make the AI chat visible / demonstrated | ⬜ TODO — chat exists under the AI-assistant tab but isn't obvious. |
-| 7 | Unconfirm / undo on confirmed AI items | ⬜ TODO — confirming a suggestion must be reversible. |
-| 8 | Right panel content by section (decision) | ⬜ TODO — recording→transcript; reviewing diagnosis→guidelines/history; prescriptions→allergies + current meds. |
-| 9 | Journey B / C / D screens (declined / flagged / reviewer) | ⬜ Partial — declined exists; flagged + reviewer queue not built. |
+| 5 | Lab results — remove confirm/mark; auto-populate | ✅ Done — no "mark received"; results populate once a test is ordered; AI flags abnormals + interprets. |
+| 6 | Make the AI chat visible / demonstrated | ✅ Done — after recording stops, the AI-assistant panel defaults to the **Chat** sub-tab (seeded Q&A + ask box). |
+| 7 | Unconfirm / undo on confirmed AI items | ✅ Done — `AiSuggestions` controlled per-section; confirmed AI items show **Undo** (returns to suggestions); manual entries keep delete. |
+| 8 | Right panel content by section | ✅ Done — default tab follows context: recording→transcript, reviewing→AI assistant, treatment→Medical Info (allergies+meds); switches only on context change. |
+| 9 | Journey B / C / D screens | ✅ Done — B declined banner; **C (flagged)**: a prescribed safety flag (e.g. Amoxicillin allergy) surfaces at sign-off and must be corrected or justified before signing; **D**: `ReviewQueue` screen (via "Review queue" on Consultations) lists flagged consultations with flag reason + transcript span + extracted data and dismiss/request-review/escalate. |
+
+**All Jun 25 items closed.** Only deliberately-not-done option: the clickable transcript Source ↗ link ("why" stays plain words per Aristote). Parallel task still open: recreating screens as 1440px Figma frames (page id 104:11532; Screen 1 done, Screen 2 partial).
 
 Reaffirmed (3rd meeting): AI is to **smooth the process, not prove a point** — suggestions appear
 proactively (before the nurse acts), each with a "why", all editable; the nurse stays the decision-maker.

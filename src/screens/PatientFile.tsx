@@ -17,7 +17,7 @@ import VitalSigns from "@/components/sections/VitalSigns";
 import DifferentialDiagnosis from "@/components/sections/DifferentialDiagnosis";
 import Laboratory from "@/components/sections/Laboratory";
 import Procedures from "@/components/sections/Procedures";
-import Prescribe from "@/components/sections/Prescribe";
+import Prescribe, { type SafetyFlag } from "@/components/sections/Prescribe";
 import PatientMovement from "@/components/sections/PatientMovement";
 import historyAvatar from "@/assets/avatars/man3.png";
 
@@ -140,7 +140,7 @@ export default function PatientFile({
   mode: PatientFileMode;
   onStartRecording: () => void;
   onStopRecording: () => void;
-  onCompleteVisit: () => void;
+  onCompleteVisit: (flags: SafetyFlag[]) => void;
 }) {
   const [panelTab, setPanelTab] = useState<PanelTab>("Medical Info");
   const [highlight, setHighlight] = useState<SourceHighlight | null>(null);
@@ -166,6 +166,7 @@ export default function PatientFile({
   const [diagnosisConfirmed, setDiagnosisConfirmed] = useState(flowComplete);
   const [procedureCount, setProcedureCount] = useState(0);
   const [prescriptionCount, setPrescriptionCount] = useState(0);
+  const [safetyFlags, setSafetyFlags] = useState<SafetyFlag[]>([]);
 
   // The step tracker reflects ACTUAL clinical progress (not scroll): a step ticks once its
   // work is done, the first unfinished step is "current", later steps are pale. The order
@@ -286,12 +287,12 @@ export default function PatientFile({
             <Procedures aiMode={aiMode} unlocked={diagnosisConfirmed} onCountChange={setProcedureCount} />
           </div>
           <div ref={(el) => { sectionRefs.current[5] = el; }} className="scroll-mt-[220px]">
-            <Prescribe aiMode={aiMode} unlocked={diagnosisConfirmed} onCountChange={setPrescriptionCount} />
+            <Prescribe aiMode={aiMode} unlocked={diagnosisConfirmed} onCountChange={setPrescriptionCount} onFlagsChange={setSafetyFlags} />
           </div>
           <div ref={(el) => { sectionRefs.current[6] = el; }} className="scroll-mt-[220px]">
             <PatientMovement
               patient={patient}
-              onCompleteVisit={onCompleteVisit}
+              onCompleteVisit={() => onCompleteVisit(safetyFlags)}
               reviewedCount={clinicalDone}
               totalSteps={6}
             />

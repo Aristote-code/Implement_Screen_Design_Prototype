@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { Sparkles, CheckCircle2, X } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import Consultations from "@/screens/Consultations";
+import ReviewQueue from "@/screens/ReviewQueue";
 import PatientFile, { type PatientFileMode } from "@/screens/PatientFile";
 import ConsentModal from "@/components/ConsentModal";
 import SignFinaliseModal from "@/components/SignFinaliseModal";
 import PreConsultModal from "@/components/PreConsultModal";
+import type { SafetyFlag } from "@/components/sections/Prescribe";
 import { patients, type Patient } from "@/data/patients";
 
-type Screen = "consultations" | "patient";
+type Screen = "consultations" | "patient" | "review";
 type Modal = "none" | "preconsult" | "consent" | "signfinalise";
 
 function ProcessingToast() {
@@ -55,6 +57,7 @@ export default function App() {
   const [modal, setModal] = useState<Modal>("none");
   const [processing, setProcessing] = useState(false);
   const [processed, setProcessed] = useState(false);
+  const [safetyFlags, setSafetyFlags] = useState<SafetyFlag[]>([]);
 
   // Stop Recording → brief processing toast → Warning (quality gate) + a success toast.
   useEffect(() => {
@@ -91,17 +94,22 @@ export default function App() {
   }
 
   return (
-    <AppShell onBack={screen === "patient" ? backToConsultations : undefined}>
-      <div key={screen === "patient" ? `patient-${mode}` : "consultations"} className="animate-in fade-in duration-300">
+    <AppShell onBack={screen !== "consultations" ? backToConsultations : undefined}>
+      <div key={screen === "patient" ? `patient-${mode}` : screen} className="animate-in fade-in duration-300">
         {screen === "consultations" ? (
-          <Consultations onSelectPatient={openPatient} />
+          <Consultations onSelectPatient={openPatient} onOpenReview={() => setScreen("review")} />
+        ) : screen === "review" ? (
+          <ReviewQueue />
         ) : (
           <PatientFile
             patient={patient}
             mode={mode}
             onStartRecording={() => setModal("consent")}
             onStopRecording={() => setProcessing(true)}
-            onCompleteVisit={() => setModal("signfinalise")}
+            onCompleteVisit={(flags) => {
+              setSafetyFlags(flags);
+              setModal("signfinalise");
+            }}
           />
         )}
       </div>
@@ -123,6 +131,7 @@ export default function App() {
       {modal === "signfinalise" && (
         <SignFinaliseModal
           patient={patient}
+          flags={safetyFlags}
           onCancel={() => setModal("none")}
           onConfirm={() => {
             setModal("none");
