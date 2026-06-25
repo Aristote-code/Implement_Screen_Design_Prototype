@@ -213,6 +213,8 @@ export default function Laboratory({
 
   return (
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
+      <h2 className="mb-5 text-[20px] font-bold text-[#111827]">Investigations</h2>
+
       {aiMode === "suggest" && mode === "request" && unlocked && (
         <AiSuggestions
           heading="AI suggested investigations"
