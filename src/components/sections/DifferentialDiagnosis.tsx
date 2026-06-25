@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Trash2, ArrowRight } from "lucide-react";
 import { DIAGNOSIS_OPTIONS, AI_DIAGNOSIS_SUGGESTIONS, type AiBasis, type AiMode, type AiSuggestion } from "@/data/consultation";
 import SelectField from "./SelectField";
-import { AiSuggestions, AiTag, StepDone } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag, StepDone, UndoBtn } from "./AiSuggestionCard";
 
 interface DiagEntry {
   id: string;
@@ -25,27 +25,31 @@ export default function DifferentialDiagnosis({
   onCountChange?: (n: number) => void;
   onConfirmDiagnosis?: () => void;
 }) {
+  // Pending AI suggestions (controlled) and committed entries are separate so a confirmed
+  // item can be un-confirmed back into the suggestions list.
+  const [pending, setPending] = useState<AiSuggestion[]>(aiMode === "accepted" ? [] : AI_DIAGNOSIS_SUGGESTIONS);
   const [entries, setEntries] = useState<DiagEntry[]>(() =>
-    aiMode === "accepted"
-      ? AI_DIAGNOSIS_SUGGESTIONS.map((d) => ({ id: d.id, label: d.label, basis: d }))
-      : [],
+    aiMode === "accepted" ? AI_DIAGNOSIS_SUGGESTIONS.map((d) => ({ id: d.id, label: d.label, basis: d })) : [],
   );
 
-  // Report the differential count up so the Laboratory section can unlock test ordering.
   useEffect(() => {
     onCountChange?.(entries.length);
   }, [entries.length, onCountChange]);
 
-  function addManual(val: string) {
-    setEntries((e) => [...e, { id: `m-${e.length}-${val}`, label: val }]);
-  }
-
   function accept(s: AiSuggestion) {
     setEntries((e) => (e.some((x) => x.id === s.id) ? e : [...e, { id: s.id, label: s.label, basis: s }]));
+    setPending((p) => p.filter((x) => x.id !== s.id));
   }
-
-  function remove(id: string) {
+  function dismiss(s: AiSuggestion) {
+    setPending((p) => p.filter((x) => x.id !== s.id));
+  }
+  function undo(id: string) {
     setEntries((e) => e.filter((x) => x.id !== id));
+    const s = AI_DIAGNOSIS_SUGGESTIONS.find((x) => x.id === id);
+    if (s) setPending((p) => (p.some((x) => x.id === id) ? p : [s, ...p]));
+  }
+  function addManual(val: string) {
+    setEntries((e) => [...e, { id: `m-${e.length}-${val}`, label: val }]);
   }
 
   const showConfirm = aiMode === "suggest" && resultsReady && entries.length > 0 && !diagnosisConfirmed;
@@ -59,8 +63,9 @@ export default function DifferentialDiagnosis({
         <AiSuggestions
           heading="AI differential suggestions"
           note="Reasoned from the chief complaint and the vital signs you recorded. Accept to add to the differential."
-          suggestions={AI_DIAGNOSIS_SUGGESTIONS}
+          suggestions={pending}
           onAccept={accept}
+          onDismiss={dismiss}
         />
       )}
 
@@ -75,12 +80,16 @@ export default function DifferentialDiagnosis({
                 <span className="truncate text-[14px] font-semibold text-[#111827]">{e.label}</span>
                 {e.basis && <AiTag basis={e.basis} />}
               </div>
-              <button
-                onClick={() => remove(e.id)}
-                className="shrink-0 text-[#e03137] transition-colors hover:text-[#b91c1c]"
-              >
-                <Trash2 className="size-4" />
-              </button>
+              {e.basis ? (
+                <UndoBtn onClick={() => undo(e.id)} />
+              ) : (
+                <button
+                  onClick={() => setEntries((arr) => arr.filter((x) => x.id !== e.id))}
+                  className="shrink-0 text-[#e03137] transition-colors hover:text-[#b91c1c]"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              )}
             </div>
           ))}
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Plus, ArrowRight, CheckCircle2, X, Sparkles, Trash2, AlertTriangle, FlaskConical } from "lucide-react";
+import { Search, Plus, ArrowRight, CheckCircle2, X, Sparkles, AlertTriangle, FlaskConical } from "lucide-react";
 import {
   LAB_CATEGORIES,
   LAB_SAMPLES,
@@ -18,7 +18,7 @@ import {
   type AiMode,
   type AiSuggestion,
 } from "@/data/consultation";
-import { AiSuggestions, AiTag } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag, UndoBtn } from "./AiSuggestionCard";
 
 type Category = "Laboratory" | "Radiology" | "Audiology";
 
@@ -161,12 +161,23 @@ export default function Laboratory({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [urgent, setUrgent] = useState(false);
   const [toast, setToast] = useState(false);
+  const [labPending, setLabPending] = useState<AiSuggestion[]>(aiMode === "accepted" ? [] : AI_LAB_SUGGESTIONS);
   const [ordered, setOrdered] = useState<OrderedTest[]>(() =>
     aiMode === "accepted" ? AI_LAB_SUGGESTIONS.map((s) => ({ id: s.id, label: s.label, basis: s })) : [],
   );
 
   function acceptAi(s: AiSuggestion) {
     setOrdered((cur) => (cur.some((x) => x.id === s.id) ? cur : [...cur, { id: s.id, label: s.label, basis: s }]));
+    setLabPending((p) => p.filter((x) => x.id !== s.id));
+    onResultsReady?.(); // results come back from the technician automatically — no nurse confirm
+  }
+  function dismissAi(s: AiSuggestion) {
+    setLabPending((p) => p.filter((x) => x.id !== s.id));
+  }
+  function undoOrder(id: string) {
+    setOrdered((c) => c.filter((x) => x.id !== id));
+    const s = AI_LAB_SUGGESTIONS.find((x) => x.id === id);
+    if (s) setLabPending((p) => (p.some((x) => x.id === id) ? p : [s, ...p]));
   }
 
   useEffect(() => {
@@ -195,6 +206,7 @@ export default function Laboratory({
     setToast(true);
     setSelected(new Set());
     setUrgent(false);
+    onResultsReady?.(); // ordering a test means results will arrive from the lab automatically
   }
 
   const labTests = LAB_CATALOG[sample].tests.filter((t) => t.toLowerCase().includes(search.trim().toLowerCase()));
@@ -205,9 +217,10 @@ export default function Laboratory({
         <AiSuggestions
           heading="AI suggested investigations"
           note="Proposed from the working differential — review before ordering."
-          suggestions={AI_LAB_SUGGESTIONS}
+          suggestions={labPending}
           acceptLabel="Order"
           onAccept={acceptAi}
+          onDismiss={dismissAi}
         />
       )}
 
@@ -221,12 +234,7 @@ export default function Laboratory({
                   <span className="truncate text-[14px] font-medium text-[#111827]">{o.label}</span>
                   <AiTag basis={o.basis} />
                 </div>
-                <button
-                  onClick={() => setOrdered((c) => c.filter((x) => x.id !== o.id))}
-                  className="shrink-0 text-[#e03137] transition-colors hover:text-[#b91c1c]"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                <UndoBtn onClick={() => undoOrder(o.id)} />
               </div>
             ))}
           </div>
@@ -353,24 +361,15 @@ export default function Laboratory({
       {/* ---------- RESULT ---------- */}
       {mode === "result" &&
         (category === "Laboratory" && aiMode === "suggest" && !resultsReady ? (
-          // Results come from the technician, not the AI. Until they're entered, the AI has
-          // nothing to interpret — so show the waiting state, not an empty interpretation.
+          // Results come from the technician AUTOMATICALLY — the nurse never fills or confirms
+          // them (Sandrine, Jun 25). No action button; they simply populate once tests are ordered.
           <div className="mt-5 rounded-[12px] border border-dashed border-[#d9dde3] bg-[#fafbfc] px-4 py-6 text-center">
             <FlaskConical className="mx-auto size-6 text-[#9aa6b6]" />
-            <p className="mt-2 text-[14px] font-semibold text-[#111827]">Awaiting results from the lab technician</p>
+            <p className="mt-2 text-[14px] font-semibold text-[#111827]">Results appear here automatically</p>
             <p className="mx-auto mt-1 max-w-[460px] text-[13px] leading-relaxed text-[#687588]">
-              {ordered.length
-                ? "Samples are being processed. The technician enters the results — then the AI flags anything abnormal."
-                : "Order tests on the request tab first; results are then entered by the technician."}
+              Order tests on the request tab — the lab technician enters the results and they
+              populate here on their own. The AI then flags anything abnormal.
             </p>
-            {ordered.length > 0 && (
-              <button
-                onClick={onResultsReady}
-                className="mt-3 inline-flex items-center gap-2 rounded-[10px] bg-[#2f78ee] px-4 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-[#2a6cd8]"
-              >
-                Mark results received
-              </button>
-            )}
           </div>
         ) : (
           <>

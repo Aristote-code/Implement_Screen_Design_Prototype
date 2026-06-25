@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Pill, ArrowRight, Printer, Trash2 } from "lucide-react";
 import { MEDICINE_OPTIONS, AI_PRESCRIPTION_SUGGESTIONS, type AiBasis, type AiMode, type AiSuggestion } from "@/data/consultation";
 import SelectField from "./SelectField";
-import { AiSuggestions, AiTag } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag, UndoBtn } from "./AiSuggestionCard";
 
 interface Rx {
   id: string;
@@ -25,6 +25,7 @@ export default function Prescribe({
   const [quantity, setQuantity] = useState("");
   const [duration, setDuration] = useState("");
   const [notes, setNotes] = useState("");
+  const [pending, setPending] = useState<AiSuggestion[]>(aiMode === "accepted" ? [] : AI_PRESCRIPTION_SUGGESTIONS);
   const [list, setList] = useState<Rx[]>(() =>
     aiMode === "accepted"
       ? AI_PRESCRIPTION_SUGGESTIONS.map((r) => ({ id: r.id, medication: r.label, quantity: "1", notes: "—", basis: r }))
@@ -32,7 +33,6 @@ export default function Prescribe({
   );
   const [nextId, setNextId] = useState(1);
 
-  // Report prescription count up so the step tracker can tick the Prescribe step.
   useEffect(() => {
     onCountChange?.(list.length);
   }, [list.length, onCountChange]);
@@ -43,16 +43,23 @@ export default function Prescribe({
     setDuration("");
     setNotes("");
   }
-
   function submit() {
     if (!medicine) return;
     setList((l) => [...l, { id: `m${nextId}`, medication: medicine, quantity: quantity || "1", notes: notes || "—" }]);
     setNextId((n) => n + 1);
     reset();
   }
-
   function acceptAi(s: AiSuggestion) {
     setList((l) => (l.some((x) => x.id === s.id) ? l : [...l, { id: s.id, medication: s.label, quantity: "1", notes: "—", basis: s }]));
+    setPending((p) => p.filter((x) => x.id !== s.id));
+  }
+  function dismissAi(s: AiSuggestion) {
+    setPending((p) => p.filter((x) => x.id !== s.id));
+  }
+  function undo(id: string) {
+    setList((l) => l.filter((x) => x.id !== id));
+    const s = AI_PRESCRIPTION_SUGGESTIONS.find((x) => x.id === id);
+    if (s) setPending((p) => (p.some((x) => x.id === id) ? p : [s, ...p]));
   }
 
   return (
@@ -63,9 +70,10 @@ export default function Prescribe({
         <AiSuggestions
           heading="AI medication suggestions"
           note="Based on the confirmed diagnosis. Each is checked against the patient's allergies and current medication. Accept to add to the prescription."
-          suggestions={AI_PRESCRIPTION_SUGGESTIONS}
+          suggestions={pending}
           acceptLabel="Prescribe"
           onAccept={acceptAi}
+          onDismiss={dismissAi}
         />
       )}
 
@@ -131,24 +139,28 @@ export default function Prescribe({
           ) : (
             <div className="mt-3">
               <div className="overflow-x-auto">
-                <div className="min-w-[420px]">
-                  <div className="grid grid-cols-[1.4fr_0.8fr_1.4fr_auto] gap-3 rounded-t-[10px] bg-[#fafafa] px-4 py-3 text-[12px] font-semibold text-[#687588]">
+                <div className="min-w-[440px]">
+                  <div className="grid grid-cols-[1.4fr_0.7fr_1.2fr_auto] gap-3 rounded-t-[10px] bg-[#fafafa] px-4 py-3 text-[12px] font-semibold text-[#687588]">
                     <span>Medication</span>
                     <span>Quantity</span>
                     <span>Notes</span>
                     <span />
                   </div>
                   {list.map((rx) => (
-                    <div key={rx.id} className="grid grid-cols-[1.4fr_0.8fr_1.4fr_auto] items-center gap-3 border-b border-[#f1f2f4] px-4 py-3 text-[14px] text-[#111827]">
+                    <div key={rx.id} className="grid grid-cols-[1.4fr_0.7fr_1.2fr_auto] items-center gap-3 border-b border-[#f1f2f4] px-4 py-3 text-[14px] text-[#111827]">
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="truncate font-medium">{rx.medication}</span>
                         {rx.basis && <AiTag basis={rx.basis} />}
                       </div>
                       <span>{rx.quantity}</span>
                       <span className="text-[13px] text-[#687588]">{rx.notes}</span>
-                      <button onClick={() => setList((l) => l.filter((x) => x.id !== rx.id))} className="text-[#e03137] transition-colors hover:text-[#b91c1c]">
-                        <Trash2 className="size-5" />
-                      </button>
+                      {rx.basis ? (
+                        <UndoBtn onClick={() => undo(rx.id)} />
+                      ) : (
+                        <button onClick={() => setList((l) => l.filter((x) => x.id !== rx.id))} className="text-[#e03137] transition-colors hover:text-[#b91c1c]">
+                          <Trash2 className="size-5" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>

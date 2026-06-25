@@ -11,7 +11,7 @@ import {
   type AiSuggestion,
 } from "@/data/consultation";
 import SelectField from "./SelectField";
-import { AiSuggestions, AiTag } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag, UndoBtn } from "./AiSuggestionCard";
 
 interface SubmittedItem {
   id: string;
@@ -43,14 +43,12 @@ export default function Procedures({
   const [search, setSearch] = useState("");
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [qty, setQty] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState<AiSuggestion[]>(aiMode === "accepted" ? [] : AI_PROCEDURE_SUGGESTIONS);
   const [submitted, setSubmitted] = useState<SubmittedItem[]>(() =>
-    aiMode === "accepted"
-      ? AI_PROCEDURE_SUGGESTIONS.map((p) => ({ id: p.id, name: p.label, qty: 1, basis: p }))
-      : [],
+    aiMode === "accepted" ? AI_PROCEDURE_SUGGESTIONS.map((p) => ({ id: p.id, name: p.label, qty: 1, basis: p })) : [],
   );
   const [nextId, setNextId] = useState(1);
 
-  // Report submitted count up so the step tracker can tick the Procedures step.
   useEffect(() => {
     onCountChange?.(submitted.length);
   }, [submitted.length, onCountChange]);
@@ -70,11 +68,7 @@ export default function Procedures({
     const toAdd = [...checked];
     if (!toAdd.length) return;
     let id = nextId;
-    const additions = toAdd.map((name) => ({
-      id: `m${id++}`,
-      name,
-      qty: config.quantity ? Math.max(1, parseInt(qty[name] || "1", 10) || 1) : 1,
-    }));
+    const additions = toAdd.map((name) => ({ id: `m${id++}`, name, qty: config.quantity ? Math.max(1, parseInt(qty[name] || "1", 10) || 1) : 1 }));
     setSubmitted((s) => [...s, ...additions]);
     setNextId(id);
     setChecked(new Set());
@@ -83,7 +77,16 @@ export default function Procedures({
 
   function acceptAi(s: AiSuggestion) {
     setSubmitted((cur) => (cur.some((x) => x.id === s.id) ? cur : [...cur, { id: s.id, name: s.label, qty: 1, basis: s }]));
+    setPending((p) => p.filter((x) => x.id !== s.id));
     setTab("Submitted Procedures");
+  }
+  function dismissAi(s: AiSuggestion) {
+    setPending((p) => p.filter((x) => x.id !== s.id));
+  }
+  function undo(id: string) {
+    setSubmitted((s) => s.filter((x) => x.id !== id));
+    const s = AI_PROCEDURE_SUGGESTIONS.find((x) => x.id === id);
+    if (s) setPending((p) => (p.some((x) => x.id === id) ? p : [s, ...p]));
   }
 
   return (
@@ -95,8 +98,9 @@ export default function Procedures({
           <AiSuggestions
             heading="AI procedure suggestions"
             note="Suggested from the confirmed diagnosis and what was heard in the consultation. Accept to add to submitted procedures."
-            suggestions={AI_PROCEDURE_SUGGESTIONS}
+            suggestions={pending}
             onAccept={acceptAi}
+            onDismiss={dismissAi}
           />
         </div>
       )}
@@ -189,9 +193,13 @@ export default function Procedures({
                   <span className="text-[14px] text-[#111827]">{item.name} ({item.qty}X)</span>
                   {item.basis && <AiTag basis={item.basis} />}
                 </div>
-                <button onClick={() => setSubmitted((s) => s.filter((x) => x.id !== item.id))} className="shrink-0 text-[#e03137] transition-colors hover:text-[#b91c1c]">
-                  <Trash2 className="size-5" />
-                </button>
+                {item.basis ? (
+                  <UndoBtn onClick={() => undo(item.id)} />
+                ) : (
+                  <button onClick={() => setSubmitted((s) => s.filter((x) => x.id !== item.id))} className="shrink-0 text-[#e03137] transition-colors hover:text-[#b91c1c]">
+                    <Trash2 className="size-5" />
+                  </button>
+                )}
               </div>
             ))
           )}

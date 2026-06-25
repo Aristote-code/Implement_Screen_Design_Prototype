@@ -106,3 +106,23 @@ from us.
 - The empty / loading patient-file state still needs the specific Figma frame to match exactly
   (node ID outstanding). Current behaviour: idle = "Start recording" prompt; post-recording =
   review banner; declined = manual-documentation banner; processing = transient toast.
+
+## Review log — Jun 25 (Sandrine) · "close this week"
+
+Tone shifted positive ("I love the progress"). Feedback is now specific. Deadline: close the
+design this week — finish outstanding items, **add no new scope**. Status against the agreed list:
+
+| # | Item | Status |
+|---|---|---|
+| 1 | Pre-consultation context card (pop-up on opening a patient file) | ✅ Done — `PreConsultModal` (known conditions, allergy in red, last visit, current meds). "Innovate, don't copy theirs." |
+| 2 | "Why" reasoning on every AI suggestion | ✅ Done — `AiTag` "Why?" popover. NOTE: shown as plain words (Aristote's earlier call); Sandrine's existing impl uses a transcript **Source ↗ link** + a guideline note — open question whether to restore the clickable Source link. |
+| 3 | AI red flag for allergy/drug conflicts | ✅ Done — Amoxicillin shows a red flag; reword to "Check for allergies — this may be counter-effective." (PRD 5.9) |
+| 4 | Remove AI from vital signs | ✅ Done — vitals are nurse-measured; inline pencil→inputs→save entry form. |
+| 5 | Lab results — remove confirm/mark; auto-populate | ⬜ TODO — results come from the technician automatically; nurse never confirms them. AI's only lab roles: suggest tests (order side) + flag abnormal results. |
+| 6 | Make the AI chat visible / demonstrated | ⬜ TODO — chat exists under the AI-assistant tab but isn't obvious. |
+| 7 | Unconfirm / undo on confirmed AI items | ⬜ TODO — confirming a suggestion must be reversible. |
+| 8 | Right panel content by section (decision) | ⬜ TODO — recording→transcript; reviewing diagnosis→guidelines/history; prescriptions→allergies + current meds. |
+| 9 | Journey B / C / D screens (declined / flagged / reviewer) | ⬜ Partial — declined exists; flagged + reviewer queue not built. |
+
+Reaffirmed (3rd meeting): AI is to **smooth the process, not prove a point** — suggestions appear
+proactively (before the nurse acts), each with a "why", all editable; the nurse stays the decision-maker.

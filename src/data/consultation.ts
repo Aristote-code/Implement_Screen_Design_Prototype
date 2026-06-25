@@ -333,7 +333,7 @@ export const AI_PRESCRIPTION_SUGGESTIONS: AiSuggestion[] = [
     rationale: "Would cover bacterial pneumonia if confirmed on imaging.",
     warning: {
       kind: "allergy",
-      text: "Allergy collision — this patient is allergic to Penicillins, and Amoxicillin is a penicillin. Review before prescribing.",
+      text: "Check for allergies — this may be counter-effective. Patient is allergic to Penicillins, and Amoxicillin is a penicillin.",
     },
   },
 ];

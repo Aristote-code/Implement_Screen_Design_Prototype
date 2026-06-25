@@ -1,6 +1,20 @@
 import { useState, type ReactNode } from "react";
-import { Sparkles, Check, X, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Sparkles, Check, X, AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react";
 import type { AiBasis, AiSuggestion } from "@/data/consultation";
+
+// Reverse a confirmed AI item — returns it to the suggestions list (Sandrine, Jun 25:
+// confirming an AI suggestion must be undoable).
+export function UndoBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title="Unconfirm"
+      className="inline-flex shrink-0 items-center gap-1 rounded-[8px] border border-[#e9eaec] px-2 py-1 text-[12px] font-semibold text-[#687588] transition-colors hover:border-[#2f78ee] hover:text-[#2f78ee]"
+    >
+      <RotateCcw className="size-3.5" /> Undo
+    </button>
+  );
+}
 
 // Green confirmation that a workflow step is complete (e.g. "vital signs recorded").
 export function StepDone({ children }: { children: ReactNode }) {
@@ -76,23 +90,24 @@ export function AiTag({ basis }: { basis: AiBasis }) {
 }
 
 // Advisory block (PRD 5.9): AI proposes items, each with its reasoning. The clinician
-// Accepts (commits it) or Dismisses. Nothing is auto-committed. Self-contained pending list.
+// Accepts (commits it) or Dismisses. CONTROLLED — the parent section owns the pending list
+// (so a confirmed item can be returned here via Undo). Nothing is auto-committed.
 export function AiSuggestions({
   heading = "AI suggestions",
   note,
   suggestions,
   acceptLabel = "Add",
   onAccept,
+  onDismiss,
 }: {
   heading?: string;
   note?: string;
   suggestions: AiSuggestion[];
   acceptLabel?: string;
   onAccept: (s: AiSuggestion) => void;
+  onDismiss?: (s: AiSuggestion) => void;
 }) {
-  const [pending, setPending] = useState<AiSuggestion[]>(suggestions);
-  if (!pending.length) return null;
-  const remove = (id: string) => setPending((p) => p.filter((x) => x.id !== id));
+  if (!suggestions.length) return null;
 
   return (
     <div className="mb-4 rounded-[14px] border border-[#cdeee9] bg-[#f6fffd] p-4">
@@ -105,7 +120,7 @@ export function AiSuggestions({
       </div>
       {note && <p className="mb-3 mt-1 text-[12px] text-[#687588]">{note}</p>}
       <div className="mt-3 space-y-2.5">
-        {pending.map((s) => (
+        {suggestions.map((s) => (
           <div
             key={s.id}
             className={`rounded-[10px] border bg-white p-3 ${s.warning ? "border-[#f3c0c0]" : "border-[#e3f1ee]"}`}
@@ -114,17 +129,14 @@ export function AiSuggestions({
               <p className="text-[14px] font-semibold text-[#111827]">{s.label}</p>
               <div className="flex shrink-0 items-center gap-1.5">
                 <button
-                  onClick={() => remove(s.id)}
+                  onClick={() => onDismiss?.(s)}
                   title="Dismiss"
                   className="grid size-7 place-items-center rounded-[8px] border border-[#e9eaec] text-[#687588] transition-colors hover:bg-[#f7f8fa]"
                 >
                   <X className="size-4" />
                 </button>
                 <button
-                  onClick={() => {
-                    onAccept(s);
-                    remove(s.id);
-                  }}
+                  onClick={() => onAccept(s)}
                   className="inline-flex items-center gap-1 rounded-[8px] bg-[#0b9487] px-2.5 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-[#0a8478]"
                 >
                   <Check className="size-3.5" /> {acceptLabel}
