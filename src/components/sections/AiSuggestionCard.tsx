@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, useRef, type ReactNode } from "react";
 import { Sparkles, Check, X, AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react";
 import type { AiBasis, AiSuggestion } from "@/data/consultation";
 
@@ -58,9 +58,34 @@ function Why({ basis }: { basis: AiBasis }) {
 // pops the reasoning (and Source/guideline). Turns red when the item carries a safety flag.
 export function AiTag({ basis }: { basis: AiBasis }) {
   const [open, setOpen] = useState(false);
+  // The popover is viewport-anchored (position: fixed) so it is never clipped by a scroll
+  // container — e.g. the prescription table's overflow-x wrapper. We measure the trigger on
+  // open and flip above the row if there isn't room below.
+  const [pos, setPos] = useState<{ top: number; left: number; above: boolean }>({ top: 0, left: 0, above: false });
+  const btnRef = useRef<HTMLButtonElement>(null);
   const danger = !!basis.warning;
+
+  function toggle() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const el = btnRef.current;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      const W = 268;
+      const H = 190;
+      const vw = window.innerWidth || 1280;
+      const vh = window.innerHeight || 800;
+      const left = Math.max(8, Math.min(r.left, vw - W - 8));
+      const above = r.bottom + H > vh - 8;
+      setPos({ top: above ? r.top - 8 : r.bottom + 8, left, above });
+    }
+    setOpen(true);
+  }
+
   return (
-    <span className="relative inline-flex items-center gap-1.5 align-middle">
+    <span className="inline-flex items-center gap-1.5 align-middle">
       <span
         className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${
           danger ? "border-[#f3c0c0] bg-[#fdecec] text-[#b42318]" : "border-[#5eead4] bg-[#f0fdfa] text-[#0b9487]"
@@ -69,7 +94,8 @@ export function AiTag({ basis }: { basis: AiBasis }) {
         Ai
       </span>
       <button
-        onClick={() => setOpen((o) => !o)}
+        ref={btnRef}
+        onClick={toggle}
         className={`text-[12px] font-semibold underline underline-offset-2 ${
           danger ? "text-[#b42318] hover:text-[#911b16]" : "text-[#0b9487] hover:text-[#0a8478]"
         }`}
@@ -78,8 +104,11 @@ export function AiTag({ basis }: { basis: AiBasis }) {
       </button>
       {open && (
         <>
-          <button className="fixed inset-0 z-20 cursor-default" aria-hidden onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-30 mt-1.5 w-[268px] rounded-[12px] border border-[#e9eaec] bg-white p-3 text-left shadow-[0_16px_40px_-8px_rgba(17,24,39,0.22)]">
+          <button className="fixed inset-0 z-40 cursor-default" aria-hidden onClick={() => setOpen(false)} />
+          <div
+            style={{ position: "fixed", top: pos.top, left: pos.left, transform: pos.above ? "translateY(-100%)" : undefined }}
+            className="z-50 w-[268px] rounded-[12px] border border-[#e9eaec] bg-white p-3 text-left shadow-[0_16px_40px_-8px_rgba(17,24,39,0.22)]"
+          >
             <Why basis={basis} />
             {basis.warning && <WarningNote warning={basis.warning} />}
           </div>
