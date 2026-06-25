@@ -148,10 +148,6 @@ export default function PatientFile({
   // One ref per left-column section, in the same order as CONSULTATION_STEPS.
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  useEffect(() => {
-    setPanelTab(mode === "idle" ? "Medical Info" : "AI assistant");
-  }, [mode]);
-
   // Flow: after recording the AI does NOT auto-commit downstream sections. It surfaces
   // advisory suggestions the clinician accepts/dismisses ("suggest"). Once finalised, the
   // accepted items are shown committed + locked ("accepted").
@@ -188,6 +184,16 @@ export default function PatientFile({
   const activeStep = firstUnfinished === -1 ? CONSULTATION_STEPS.length : firstUnfinished;
   // Visit is signable once the clinical steps (history → prescribe) are complete.
   const clinicalDone = stepDone.slice(0, 6).filter(Boolean).length;
+
+  // What the right panel shows by clinical context (Sandrine, Jun 25): recording → live
+  // transcript; reviewing (pre-treatment) → AI assistant; treatment/prescribing → Medical Info
+  // (allergies + current meds, the safety-critical context). Only switches when the context
+  // itself changes, so the nurse's manual tab choice within a context is preserved.
+  const panelContext =
+    mode === "recording" ? "recording" : mode === "idle" || mode === "declined" ? "idle" : diagnosisConfirmed ? "treatment" : "review";
+  useEffect(() => {
+    setPanelTab(panelContext === "idle" || panelContext === "treatment" ? "Medical Info" : "AI assistant");
+  }, [panelContext]);
 
   // "Source" on any AI-added field opens the AI transcription and highlights the cited turns.
   const viewSource = useCallback((turns: number[]) => {
@@ -297,6 +303,7 @@ export default function PatientFile({
           tab={panelTab}
           onTab={setPanelTab}
           aiAvailable={mode !== "declined"}
+          recording={mode === "recording"}
           className="z-10 lg:sticky lg:top-[104px] lg:max-h-[calc(100vh-128px)] lg:self-start lg:overflow-y-auto"
         />
       </div>

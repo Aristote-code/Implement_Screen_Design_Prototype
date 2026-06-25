@@ -257,9 +257,11 @@ function AiEmpty() {
   );
 }
 
-function AiAssistant({ aiAvailable }: { aiAvailable: boolean }) {
+function AiAssistant({ aiAvailable, recording = false }: { aiAvailable: boolean; recording?: boolean }) {
   const ctx = useSource();
-  const [sub, setSub] = useState<"transcription" | "chat">("transcription");
+  // During recording the live transcript is most useful; once recording stops the chat
+  // ("ask the AI about this consultation") is front-and-centre so it's clearly discoverable.
+  const [sub, setSub] = useState<"transcription" | "chat">(recording ? "transcription" : "chat");
 
   // A "Source" click always lands on the transcription sub-tab.
   useEffect(() => {
@@ -292,12 +294,14 @@ export default function PatientPanel({
   tab,
   onTab,
   aiAvailable = true,
+  recording = false,
   className = "",
 }: {
   patient: Patient;
   tab: Tab;
   onTab: (t: Tab) => void;
   aiAvailable?: boolean;
+  recording?: boolean;
   className?: string;
 }) {
   return (
@@ -345,7 +349,7 @@ export default function PatientPanel({
       <div className="pt-5">
         {tab === "Medical Info" && <MedicalInfo />}
         {tab === "Personal Info" && <PersonalInfo />}
-        {tab === "AI assistant" && <AiAssistant aiAvailable={aiAvailable} />}
+        {tab === "AI assistant" && <AiAssistant aiAvailable={aiAvailable} recording={recording} />}
       </div>
     </div>
   );
