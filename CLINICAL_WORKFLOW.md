@@ -106,6 +106,10 @@ from us.
 - The empty / loading patient-file state still needs the specific Figma frame to match exactly
   (node ID outstanding). Current behaviour: idle = "Start recording" prompt; post-recording =
   review banner; declined = manual-documentation banner; processing = transient toast.
+- **Minor non-AI polish (deferrable — flagged Jun 26, not blocking, no AI impact):**
+  (a) Procedures → manual **Add** moves items to the Submitted tab but gives no feedback / doesn't
+  switch tabs; (b) Prescribe → manual **Submit** adds the row with no confirmation toast (Print
+  buttons are decorative). Both are on the manual paths only; the AI accept/undo flows are unaffected.
 
 ## Review log — Jun 25 (Sandrine) · "close this week"
 
