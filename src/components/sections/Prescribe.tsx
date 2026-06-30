@@ -79,17 +79,6 @@ export default function Prescribe({
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
       <h2 className="mb-5 text-[20px] font-bold text-[#111827]">Prescribe</h2>
 
-      {aiMode === "suggest" && unlocked && (
-        <AiSuggestions
-          heading="AI medication suggestions"
-          note="Based on the confirmed diagnosis. Each is checked against the patient's allergies and current medication. Accept to add to the prescription."
-          suggestions={pending}
-          acceptLabel="Prescribe"
-          onAccept={acceptAi}
-          onDismiss={dismissAi}
-        />
-      )}
-
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         {/* Left: medicine + form */}
         <div className="space-y-4">
@@ -188,6 +177,19 @@ export default function Prescribe({
           )}
         </div>
       </div>
+
+      {aiMode === "suggest" && unlocked && (
+        <div className="mt-6">
+          <AiSuggestions
+            heading="AI medication suggestions"
+            note="Advisory — based on the confirmed diagnosis and checked against the patient's allergies + current meds. Accept to add to the prescription above."
+            suggestions={pending}
+            acceptLabel="Prescribe"
+            onAccept={acceptAi}
+            onDismiss={dismissAi}
+          />
+        </div>
+      )}
     </div>
   );
 }

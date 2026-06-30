@@ -25,9 +25,12 @@ export const HISTORY_ENTRIES: HistoryEntry[] = [
 
 export const PLACEHOLDER_COMPLAINT = "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean l";
 
-// AI-extracted / finalised chief complaint shown once recording has produced a draft.
-export const AI_COMPLAINT =
-  "Patient presents with shortness of breath and wheezing for 2 days, progressively worsening at night. Reports tachypnoea approximately 50–60 breaths per minute. Known asthma since 2020, Salbutamol PRN not providing relief today.";
+// AI-extracted chief complaint (short — one line) and the fuller History of Present Illness
+// narrative, shown once recording has produced a draft. Both stay editable (PRD 5.8).
+export const AI_COMPLAINT = "Shortness of breath and wheezing — 2 days.";
+export const AI_HPI =
+  "Shortness of breath and wheezing for 2 days, progressively worsening at night. Reports tachypnoea approximately 50–60 breaths per minute. Known asthma since 2020; Salbutamol PRN not providing relief today. No fever or chest pain.";
+export const PLACEHOLDER_HPI = "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean leo ligula, porttitor eu.";
 
 export const AI_EXTRACTED_SUMMARY =
   "AI extracted — Shortness of breath and wheezing, 2-day onset, worsening at night. Tachypnoea ~50–60 bpm. Known asthma 2020.";
@@ -223,11 +226,22 @@ export type AiMode = "none" | "suggest" | "accepted";
 //  - `guideline` → it came from clinical KNOWLEDGE (not said in the room); cite the reference
 //  `rationale` is the plain-language reasoning shown in both cases.
 //  `warning` is a safety flag (allergy collision, interaction, dose) — surfaced, never blocking.
+// Clinical action category (H1000 CDS taxonomy). Each AI suggestion is classified by what
+// the clinician should DO, with a colour + priority that are consistent across every step:
+// red = most urgent / critical, amber = important soon, blue = needs referral/escalation,
+// green = manageable at the health centre, gray = unlikely / avoid. (Lower priority = more urgent.)
+export interface AiCategory {
+  label: string;
+  color: "red" | "amber" | "blue" | "green" | "gray";
+  priority: number;
+}
+
 export interface AiBasis {
   source?: number[];
   rationale?: string;
   guideline?: string;
   warning?: { kind: "allergy" | "interaction" | "dose"; text: string };
+  category?: AiCategory;
 }
 
 export interface AiSuggestion extends AiBasis {
@@ -303,6 +317,7 @@ export const AI_DIAGNOSIS_SUGGESTIONS: AiSuggestion[] = [
   {
     id: "dx-asthma",
     label: "J45.9 — Asthma exacerbation",
+    category: { label: "Initiate & refer", color: "amber", priority: 2 },
     source: [1, 3, 5],
     rationale:
       "Wheezing and progressively worsening shortness of breath over 2 days; known asthma since 2020 with no relief from Salbutamol today.",
@@ -310,6 +325,7 @@ export const AI_DIAGNOSIS_SUGGESTIONS: AiSuggestion[] = [
   {
     id: "dx-pneumonia",
     label: "J18.9 — Pneumonia (consider to exclude)",
+    category: { label: "Refer for Dx", color: "blue", priority: 3 },
     guideline: "IMCI · Acute Respiratory Illness",
     rationale:
       "Tachypnoea ~50–60/min without bronchodilator response can indicate a lower-respiratory infection. Not raised in the conversation — proposed from clinical guidance.",
@@ -321,12 +337,14 @@ export const AI_LAB_SUGGESTIONS: AiSuggestion[] = [
   {
     id: "lab-cxr",
     label: "Chest X-Ray (PA) — Radiology",
+    category: { label: "Essential", color: "red", priority: 1 },
     guideline: "Acute Respiratory Illness pathway",
     rationale: "Differentiate an asthma exacerbation from pneumonia given the tachypnoea.",
   },
   {
     id: "lab-fbc",
     label: "Full Blood Count (FBC/NFS) — Blood",
+    category: { label: "Supportive", color: "amber", priority: 2 },
     guideline: "Breathlessness work-up",
     rationale: "Screen for infection or anaemia that could be contributing to the breathlessness.",
   },
@@ -341,12 +359,14 @@ export const AI_PROCEDURE_SUGGESTIONS: AiSuggestion[] = [
   {
     id: "proc-neb",
     label: "Nebulisation therapy",
+    category: { label: "Perform at HC", color: "green", priority: 2 },
     source: [3, 5],
     rationale: "Active wheeze with respiratory distress — deliver a bronchodilator.",
   },
   {
     id: "proc-spo2",
     label: "O₂ saturation monitoring",
+    category: { label: "Perform at HC", color: "green", priority: 2 },
     source: [5],
     rationale: "Reported respiratory rate around 50/min — monitor oxygenation.",
   },
@@ -356,18 +376,21 @@ export const AI_PRESCRIPTION_SUGGESTIONS: AiSuggestion[] = [
   {
     id: "rx-salb",
     label: "Salbutamol 2.5mg nebuliser PRN",
+    category: { label: "Prescribe at HC", color: "green", priority: 2 },
     source: [1, 3],
     rationale: "First-line bronchodilator for an acute wheeze.",
   },
   {
     id: "rx-pred",
     label: "Prednisolone 40mg OD × 5 days",
+    category: { label: "Prescribe at HC", color: "green", priority: 2 },
     guideline: "Asthma exacerbation · oral corticosteroid",
     rationale: "Short oral steroid course for a moderate exacerbation.",
   },
   {
     id: "rx-amox",
     label: "Amoxicillin 500mg TID × 5 days",
+    category: { label: "After MD review", color: "amber", priority: 3 },
     guideline: "Community-acquired pneumonia",
     rationale: "Would cover bacterial pneumonia if confirmed on imaging.",
     warning: {

@@ -5,9 +5,12 @@ import {
   CONSULTATION_STEPS,
   HISTORY_ENTRIES,
   PLACEHOLDER_COMPLAINT,
+  PLACEHOLDER_HPI,
   AI_COMPLAINT,
+  AI_HPI,
   AI_SOURCES,
   type AiMode,
+  type AiBasis,
 } from "@/data/consultation";
 import StepTracker from "@/components/StepTracker";
 import PatientPanel, { type PanelTab } from "@/components/PatientPanel";
@@ -90,41 +93,67 @@ function Banner({ mode, onStart, onStop }: { mode: PatientFileMode; onStart: () 
   );
 }
 
-function ChiefComplaint({ mode }: { mode: PatientFileMode }) {
-  const isAiFilled = mode === "warning" || mode === "finalised";
-  // AI may DRAFT the complaint from the recording, but it stays editable (PRD 5.8 — every
-  // extracted field is editable). The clinician can accept, refine, or rewrite it.
-  const [value, setValue] = useState(isAiFilled ? AI_COMPLAINT : PLACEHOLDER_COMPLAINT);
-
+// An AI-draftable, always-editable clinical text field (PRD 5.8). Used for the Chief Complaint
+// and the History of Present Illness.
+function EditableNote({
+  title,
+  aiFilled,
+  aiText,
+  placeholder,
+  rows,
+  basis,
+}: {
+  title: string;
+  aiFilled: boolean;
+  aiText: string;
+  placeholder: string;
+  rows: number;
+  basis?: AiBasis;
+}) {
+  const [value, setValue] = useState(aiFilled ? aiText : placeholder);
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <span className="text-[14px] font-bold text-[#111827]">Chief Complaint</span>
-        {isAiFilled && (
-          <AiTag
-            basis={{
-              source: AI_SOURCES.complaint,
-              rationale: "Drafted from the recording — patient described shortness of breath and wheezing worsening over 2 days.",
-            }}
-          />
-        )}
+        <span className="text-[14px] font-bold text-[#111827]">{title}</span>
+        {aiFilled && basis && <AiTag basis={basis} />}
       </div>
-      <div
-        className={`rounded-[12px] border p-4 focus-within:border-[#2f78ee] ${
-          isAiFilled ? "border-[#d6efe6] bg-[#f3fbf7]" : "border-[#e9eaec]"
-        }`}
-      >
+      <div className={`rounded-[12px] border p-4 focus-within:border-[#2f78ee] ${aiFilled ? "border-[#d6efe6] bg-[#f3fbf7]" : "border-[#e9eaec]"}`}>
         <textarea
           value={value}
-          onChange={(e) => setValue(e.target.value.slice(0, 400))}
-          rows={isAiFilled ? 4 : 2}
+          onChange={(e) => setValue(e.target.value.slice(0, 600))}
+          rows={rows}
           className="w-full resize-none bg-transparent text-[14px] leading-relaxed text-[#111827] outline-none"
         />
         <div className="mt-1 flex items-center justify-between text-[12px] text-[#9aa6b6]">
-          <span>{isAiFilled ? "AI-drafted — edit freely before signing" : ""}</span>
-          <span>{value.length}/400</span>
+          <span>{aiFilled ? "AI-drafted — edit freely before signing" : ""}</span>
+          <span>{value.length}/600</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Chief Complaint (one line) + History of Present Illness (the fuller narrative). Both editable.
+function ChiefComplaint({ mode }: { mode: PatientFileMode }) {
+  const isAiFilled = mode === "warning" || mode === "finalised";
+  return (
+    <div className="space-y-4">
+      <EditableNote
+        title="Chief Complaint"
+        aiFilled={isAiFilled}
+        aiText={AI_COMPLAINT}
+        placeholder={PLACEHOLDER_COMPLAINT}
+        rows={1}
+        basis={{ source: AI_SOURCES.complaint, rationale: "Drafted from the recording — the patient's main reason for the visit, in one line." }}
+      />
+      <EditableNote
+        title="History of Present Illness"
+        aiFilled={isAiFilled}
+        aiText={AI_HPI}
+        placeholder={PLACEHOLDER_HPI}
+        rows={4}
+        basis={{ source: AI_SOURCES.complaint, rationale: "Drafted from the recording — onset, course and associated symptoms of the presenting problem." }}
+      />
     </div>
   );
 }

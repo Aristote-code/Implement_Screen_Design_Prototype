@@ -93,18 +93,6 @@ export default function Procedures({
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
       <h2 className="text-[20px] font-bold text-[#111827]">Procedures</h2>
 
-      {aiMode === "suggest" && unlocked && (
-        <div className="mt-5">
-          <AiSuggestions
-            heading="AI procedure suggestions"
-            note="Suggested from the confirmed diagnosis and what was heard in the consultation. Accept to add to submitted procedures."
-            suggestions={pending}
-            onAccept={acceptAi}
-            onDismiss={dismissAi}
-          />
-        </div>
-      )}
-
       <div className="mt-4 flex gap-8 border-b border-[#f1f2f4]">
         {PROCEDURE_TABS.map((t) => (
           <button
@@ -203,6 +191,18 @@ export default function Procedures({
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {aiMode === "suggest" && unlocked && (
+        <div className="mt-6">
+          <AiSuggestions
+            heading="AI procedure suggestions"
+            note="Advisory — suggested from the confirmed diagnosis and what was heard. Accept to add to submitted procedures above."
+            suggestions={pending}
+            onAccept={acceptAi}
+            onDismiss={dismissAi}
+          />
         </div>
       )}
     </div>

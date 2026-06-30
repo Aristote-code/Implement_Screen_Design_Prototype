@@ -1,6 +1,25 @@
 import { useState, useRef, type ReactNode } from "react";
 import { Sparkles, Check, X, AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react";
-import type { AiBasis, AiSuggestion } from "@/data/consultation";
+import type { AiBasis, AiCategory, AiSuggestion } from "@/data/consultation";
+
+// Clinical action-category badge (colour + label from the H1000 CDS taxonomy). Colour meaning
+// is consistent across every step: red = critical, amber = important soon, blue = refer,
+// green = manageable at health centre, gray = unlikely/avoid.
+const CATEGORY_CLS: Record<AiCategory["color"], string> = {
+  red: "border-[#f3c0c0] bg-[#fdecec] text-[#c0392b]",
+  amber: "border-[#f3d9b0] bg-[#fef3e2] text-[#c97000]",
+  blue: "border-[#b8d0f0] bg-[#e8f0fb] text-[#2e6cb5]",
+  green: "border-[#9dd4b8] bg-[#e6f4ed] text-[#1a7a4a]",
+  gray: "border-[#e2e5ea] bg-[#f4f6f8] text-[#6b7280]",
+};
+
+export function CategoryPill({ category }: { category: AiCategory }) {
+  return (
+    <span className={`shrink-0 rounded-[5px] border px-1.5 py-0.5 text-[10px] font-bold ${CATEGORY_CLS[category.color]}`}>
+      {category.label}
+    </span>
+  );
+}
 
 // Reverse a confirmed AI item — returns it to the suggestions list (Sandrine, Jun 25:
 // confirming an AI suggestion must be undoable).
@@ -86,6 +105,7 @@ export function AiTag({ basis }: { basis: AiBasis }) {
 
   return (
     <span className="inline-flex items-center gap-1.5 align-middle">
+      {basis.category && <CategoryPill category={basis.category} />}
       <span
         className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${
           danger ? "border-[#f3c0c0] bg-[#fdecec] text-[#b42318]" : "border-[#5eead4] bg-[#f0fdfa] text-[#0b9487]"
@@ -137,6 +157,8 @@ export function AiSuggestions({
   onDismiss?: (s: AiSuggestion) => void;
 }) {
   if (!suggestions.length) return null;
+  // Most urgent first (red/priority-1 at the top), per the H1000 colour-priority taxonomy.
+  const ordered = [...suggestions].sort((a, b) => (a.category?.priority ?? 99) - (b.category?.priority ?? 99));
 
   return (
     <div className="mb-4 rounded-[14px] border border-[#cdeee9] bg-[#f6fffd] p-4">
@@ -149,13 +171,16 @@ export function AiSuggestions({
       </div>
       {note && <p className="mb-3 mt-1 text-[12px] text-[#687588]">{note}</p>}
       <div className="mt-3 space-y-2.5">
-        {suggestions.map((s) => (
+        {ordered.map((s) => (
           <div
             key={s.id}
             className={`rounded-[10px] border bg-white p-3 ${s.warning ? "border-[#f3c0c0]" : "border-[#e3f1ee]"}`}
           >
             <div className="flex items-start justify-between gap-3">
-              <p className="text-[14px] font-semibold text-[#111827]">{s.label}</p>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <p className="text-[14px] font-semibold text-[#111827]">{s.label}</p>
+                {s.category && <CategoryPill category={s.category} />}
+              </div>
               <div className="flex shrink-0 items-center gap-1.5">
                 <button
                   onClick={() => onDismiss?.(s)}

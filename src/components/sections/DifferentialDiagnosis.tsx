@@ -59,15 +59,11 @@ export default function DifferentialDiagnosis({
     <div className="rounded-[20px] bg-white p-6 shadow-[0_1px_3px_rgba(17,24,39,0.06)] sm:p-7">
       <h2 className="mb-5 text-[20px] font-bold text-[#111827]">Differential Diagnosis</h2>
 
-      {aiMode === "suggest" && unlocked && (
-        <AiSuggestions
-          heading="AI differential suggestions"
-          note="Reasoned from the chief complaint and the vital signs you recorded. Accept to add to the differential."
-          suggestions={pending}
-          onAccept={accept}
-          onDismiss={dismiss}
-        />
-      )}
+      {/* The clinician leads — manual entry sits on top; AI suggestions are advisory, below. */}
+      <div className="mb-4">
+        <p className="mb-1.5 text-[13px] font-semibold text-[#687588]">Add a diagnosis</p>
+        <SelectField options={DIAGNOSIS_OPTIONS} placeholder="Select or type a diagnosis" onChange={addManual} />
+      </div>
 
       {entries.length > 0 && (
         <div className="mb-4 space-y-2">
@@ -95,7 +91,15 @@ export default function DifferentialDiagnosis({
         </div>
       )}
 
-      <SelectField options={DIAGNOSIS_OPTIONS} placeholder="Add a diagnosis" onChange={addManual} />
+      {aiMode === "suggest" && unlocked && (
+        <AiSuggestions
+          heading="AI differential suggestions"
+          note="Advisory — reasoned from the chief complaint and the vitals you recorded. Accept to add to your differential above."
+          suggestions={pending}
+          onAccept={accept}
+          onDismiss={dismiss}
+        />
+      )}
 
       {showConfirm && (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[#cdeee9] bg-[#f6fffd] px-4 py-3">

@@ -132,3 +132,20 @@ design this week — finish outstanding items, **add no new scope**. Status agai
 
 Reaffirmed (3rd meeting): AI is to **smooth the process, not prove a point** — suggestions appear
 proactively (before the nurse acts), each with a "why", all editable; the nurse stays the decision-maker.
+
+## Review log — Jun 29 (Dr. Kamugundu, clinical lead)
+
+Clinical-lead review. Big concrete addition: the **H1000 CDS category/colour/priority taxonomy**
+(`H1000_Category_Reference_Frontend`). Status:
+
+| Item | Status |
+|---|---|
+| **Category + colour + priority** on every AI suggestion (DDx / Investigations / Prescriptions / Procedures). red=critical, amber=important soon, blue=refer, green=manageable at HC, gray=unlikely/avoid; sorted most-urgent first | ✅ Done — `AiCategory` on `AiBasis`, `CategoryPill` rendered on suggestion cards + committed rows; suggestions sorted by priority. Mock categories assigned per the H1000 doc. |
+| Manual **"Add"** control above AI suggestions ("driver's seat") | ✅ Done — Differential puts the Add field on top, AI suggestions below; Procedures + Prescribe moved their AI block beneath the manual UI. |
+| **History of Present Illness** field after Chief Complaint | ✅ Done — Chief Complaint is now one line; HPI is the narrative. Both AI-drafted + editable (`EditableNote`). |
+| Transcript looks like WhatsApp → **formal stacked** (speaker beneath speaker), like the MoH product | ⬜ TODO — reformat `Transcription` from chat bubbles to a formal stacked layout. Raw transcript stays background-only; show the cleaned/diarised version (confidence). |
+| AI **vitals trend analysis** over time (5-yr data points, "uncontrolled", suggests labs) — not just ↑/↓ | ⬜ TODO — add an AI trend/insight note on vitals reasoning over historical readings. (Refines "no AI in vitals": AI never *enters* a value, but may *analyse* the trend.) |
+| AI gently **flags a wrong manual entry** ("considering the presentation…, this doesn't seem like X — consider Y?") | ⬜ TODO — needs Sandrine to confirm the principle/wording. Don't delegate/scold; suggest. |
+
+Exact category sets per step are in `H1000_Category_Reference_Frontend (1).html` (Downloads). Backend
+field is `action_category` (new) / `category` (legacy); `color` + `priority` always returned.
