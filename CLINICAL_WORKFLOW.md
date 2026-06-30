@@ -145,7 +145,7 @@ Clinical-lead review. Big concrete addition: the **H1000 CDS category/colour/pri
 | **History of Present Illness** field after Chief Complaint | ✅ Done — Chief Complaint is now one line; HPI is the narrative. Both AI-drafted + editable (`EditableNote`). |
 | Transcript looks like WhatsApp → **formal stacked** (speaker beneath speaker), like the MoH product | ✅ Done — `Transcription` now stacks every turn on one side with a coloured left accent (clinician vs patient), no chat bubbles. (Raw transcript stays background-only by design.) |
 | AI **vitals trend analysis** over time (5-yr data points, "uncontrolled", suggests labs) — not just ↑/↓ | ⬜ TODO — add an AI trend/insight note on vitals reasoning over historical readings. (Refines "no AI in vitals": AI never *enters* a value, but may *analyse* the trend.) |
-| AI gently **flags a wrong manual entry** ("considering the presentation…, this doesn't seem like X — consider Y?") | ⬜ TODO — needs Sandrine to confirm the principle/wording. Don't delegate/scold; suggest. |
+| AI gently **flags a wrong manual entry** ("considering the presentation…, this doesn't seem like X — consider Y?") | ✅ Done — uses Sandrine's `unlikely` (gray) category. When the nurse manually adds a poor-fit diagnosis (e.g. Malaria for a no-fever wheeze case), AI tags it **Unlikely** + a gentle "AI review" note with the reason and a better alternative (`AI_DX_REVIEW`). Sensible picks pass un-flagged. Never blocks. |
 
 Exact category sets per step are in `H1000_Category_Reference_Frontend (1).html` (Downloads). Backend
 field is `action_category` (new) / `category` (legacy); `color` + `priority` always returned.

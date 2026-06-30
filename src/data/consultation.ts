@@ -80,7 +80,15 @@ export const VITAL_GROUPS = ["Yesterday: 02:00 pa", "Today: 08:00 am", "Today: 0
 // which reference "the vitals you recorded".
 
 // --- Differential diagnosis ---
-export const DIAGNOSIS_OPTIONS = ["HP: Health post diagnosis", "Presumptive diagnosis", "Confirmed diagnosis"];
+// Real diagnoses the nurse can add manually. AI reviews each pick against the presentation
+// (see AI_DX_REVIEW) and gently flags a poor fit as "unlikely".
+export const DIAGNOSIS_OPTIONS = [
+  "J45.9 — Asthma exacerbation",
+  "J20 — Acute bronchitis",
+  "J18.9 — Pneumonia",
+  "B54 — Malaria (unspecified)",
+  "I50 — Heart failure",
+];
 
 // --- Laboratory ---
 export const LAB_CATEGORIES = ["Laboratory", "Radiology", "Audiology"];
@@ -331,6 +339,20 @@ export const AI_DIAGNOSIS_SUGGESTIONS: AiSuggestion[] = [
       "Tachypnoea ~50–60/min without bronchodilator response can indicate a lower-respiratory infection. Not raised in the conversation — proposed from clinical guidance.",
   },
 ];
+
+// AI's review of a MANUALLY-entered diagnosis (Dr. Kamugundu, Jun 29 + Sandrine's H1000
+// taxonomy). When the nurse adds a diagnosis that doesn't fit the presentation, AI gently
+// flags it "unlikely" (gray) with the reason and a better alternative — it never blocks.
+export const AI_DX_REVIEW: Record<string, { category: AiCategory; note: string }> = {
+  "B54 — Malaria (unspecified)": {
+    category: { label: "Unlikely", color: "gray", priority: 5 },
+    note: "This doesn't fit the presentation — no fever, and the picture is wheeze-predominant. Would you consider Asthma exacerbation instead?",
+  },
+  "I50 — Heart failure": {
+    category: { label: "Unlikely", color: "gray", priority: 5 },
+    note: "Limited supporting evidence here — no oedema, orthopnoea or raised JVP noted. A respiratory cause looks more likely.",
+  },
+};
 
 // Investigations the AI proposes (PRD 5.9 "tests that may be appropriate").
 export const AI_LAB_SUGGESTIONS: AiSuggestion[] = [

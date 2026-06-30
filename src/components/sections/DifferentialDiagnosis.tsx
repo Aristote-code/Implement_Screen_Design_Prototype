@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { Trash2, ArrowRight } from "lucide-react";
-import { DIAGNOSIS_OPTIONS, AI_DIAGNOSIS_SUGGESTIONS, type AiBasis, type AiMode, type AiSuggestion } from "@/data/consultation";
+import { Trash2, ArrowRight, Sparkles } from "lucide-react";
+import { DIAGNOSIS_OPTIONS, AI_DIAGNOSIS_SUGGESTIONS, AI_DX_REVIEW, type AiBasis, type AiCategory, type AiMode, type AiSuggestion } from "@/data/consultation";
 import SelectField from "./SelectField";
-import { AiSuggestions, AiTag, StepDone, UndoBtn } from "./AiSuggestionCard";
+import { AiSuggestions, AiTag, CategoryPill, StepDone, UndoBtn } from "./AiSuggestionCard";
 
 interface DiagEntry {
   id: string;
   label: string;
   basis?: AiBasis;
+  review?: { category: AiCategory; note: string };
 }
 
 export default function DifferentialDiagnosis({
@@ -49,7 +50,9 @@ export default function DifferentialDiagnosis({
     if (s) setPending((p) => (p.some((x) => x.id === id) ? p : [s, ...p]));
   }
   function addManual(val: string) {
-    setEntries((e) => [...e, { id: `m-${e.length}-${val}`, label: val }]);
+    // AI reviews the nurse's pick against the presentation; a poor fit is gently flagged.
+    const review = AI_DX_REVIEW[val];
+    setEntries((e) => [...e, { id: `m-${e.length}-${val}`, label: val, review }]);
   }
 
   const showConfirm = aiMode === "suggest" && resultsReady && entries.length > 0 && !diagnosisConfirmed;
@@ -70,21 +73,33 @@ export default function DifferentialDiagnosis({
           {entries.map((e) => (
             <div
               key={e.id}
-              className="flex items-center justify-between gap-3 rounded-[10px] border border-[#e9eaec] px-4 py-3"
+              className={`rounded-[10px] border px-4 py-3 ${e.review ? "border-[#f3d9b0] bg-[#fffdf8]" : "border-[#e9eaec]"}`}
             >
-              <div className="flex min-w-0 items-center gap-2.5">
-                <span className="truncate text-[14px] font-semibold text-[#111827]">{e.label}</span>
-                {e.basis && <AiTag basis={e.basis} />}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="truncate text-[14px] font-semibold text-[#111827]">{e.label}</span>
+                  {e.basis && <AiTag basis={e.basis} />}
+                  {e.review && <CategoryPill category={e.review.category} />}
+                </div>
+                {e.basis ? (
+                  <UndoBtn onClick={() => undo(e.id)} />
+                ) : (
+                  <button
+                    onClick={() => setEntries((arr) => arr.filter((x) => x.id !== e.id))}
+                    className="shrink-0 text-[#e03137] transition-colors hover:text-[#b91c1c]"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                )}
               </div>
-              {e.basis ? (
-                <UndoBtn onClick={() => undo(e.id)} />
-              ) : (
-                <button
-                  onClick={() => setEntries((arr) => arr.filter((x) => x.id !== e.id))}
-                  className="shrink-0 text-[#e03137] transition-colors hover:text-[#b91c1c]"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+              {e.review && (
+                <div className="mt-2 flex items-start gap-2 text-[12px] leading-relaxed text-[#9a6a00]">
+                  <Sparkles className="mt-0.5 size-3.5 shrink-0 text-[#c97000]" />
+                  <span>
+                    <span className="font-bold">AI review · </span>
+                    {e.review.note}
+                  </span>
+                </div>
               )}
             </div>
           ))}
