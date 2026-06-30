@@ -129,6 +129,8 @@ function Transcription() {
           </button>
         </div>
       )}
+      {/* Formal stacked transcript — every turn on one side, speaker beneath speaker (not chat
+          bubbles). A coloured left accent distinguishes clinician from patient. */}
       {TRANSCRIPT.map((line, i) => {
         const isPatient = line.speaker === "Patient";
         const hi = !!highlight?.turns.includes(i);
@@ -138,22 +140,18 @@ function Transcription() {
             ref={(el) => {
               refs.current[i] = el;
             }}
-            className={`flex flex-col gap-1 ${isPatient ? "items-end" : "items-start"}`}
+            className={`border-l-2 py-1.5 pl-3 transition-all duration-300 ${
+              hi
+                ? "rounded-r-[8px] border-[#0b9487] bg-[#0b9487]/10"
+                : isPatient
+                  ? "border-[#0b9487]"
+                  : "border-[#2f78ee]"
+            }`}
           >
-            <span className={`text-[12px] font-semibold ${isPatient ? "text-[#0b9487]" : "text-[#687588]"}`}>
+            <span className={`text-[11px] font-bold uppercase tracking-wide ${isPatient ? "text-[#0b9487]" : "text-[#2f78ee]"}`}>
               {line.speaker}
             </span>
-            <p
-              className={`max-w-[88%] rounded-2xl px-4 py-2.5 text-[14px] leading-snug transition-all duration-300 ${
-                hi
-                  ? "bg-[#0b9487]/15 text-[#111827] ring-2 ring-[#0b9487] ring-offset-2 ring-offset-white"
-                  : isPatient
-                    ? "bg-[#0b9487]/10 text-[#111827]"
-                    : "border border-[#eef0f3] bg-[#fafbfc] text-[#111827]"
-              }`}
-            >
-              {line.text}
-            </p>
+            <p className="mt-0.5 text-[14px] leading-relaxed text-[#111827]">{line.text}</p>
           </div>
         );
       })}
